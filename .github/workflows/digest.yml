@@ -25,6 +25,11 @@ permissions:
 jobs:
   digest:
     runs-on: ubuntu-latest
+    # Job level: the dedup-ledger step below also has to know whether Supabase
+    # owns that state, and a step-scoped env would read as empty there.
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -53,6 +58,8 @@ jobs:
       # render the digest HTML into out/ WITHOUT calling the Resend API.
       - name: Run digest
         env:
+          # Without these the job silently uses the local file store, which on an
+          # ephemeral runner means no subscribers at all. This step reads subscribers and prefs, writes the dedup ledger.
           DRY_RUN: ${{ inputs.dry_run || 'false' }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
@@ -74,6 +81,11 @@ jobs:
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Only when git IS the store. With Supabase configured the ledger is
+          # already durable, and committing it would put subscriber ids in history.
+          if [ -n "${SUPABASE_URL:-}" ]; then
+            echo "Supabase owns the dedup ledger — nothing to commit."; exit 0
+          fi
           git add -f data/seen.json 2>/dev/null || true
           git diff --staged --quiet || git commit -m "digest: dedup ledger $(date -u +%F)"
           git push

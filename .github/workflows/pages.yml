@@ -60,6 +60,26 @@ jobs:
       # web/ is the whole static site (index.html, action.html); nothing
       # outside it belongs on the public site, so it — not the repo root —
       # is what gets uploaded as the Pages artifact.
+      # web/action.html handles the star/skip, unsubscribe and confirm links from
+      # digest emails and talks to Supabase directly from the browser. The ANON
+      # key is designed to be public: every table it can reach is protected by
+      # row-level security, and the three write paths go through SECURITY DEFINER
+      # functions that authorise on a per-user token. The SERVICE key must never
+      # appear here.
+      - name: Write browser config
+        run: |
+          cat > web/config.js <<'EOF'
+          window.__SUPABASE_URL__  = '__URL__';
+          window.__SUPABASE_ANON__ = '__ANON__';
+          EOF
+          sed -i "s|__URL__|${SUPABASE_URL}|; s|__ANON__|${SUPABASE_ANON_KEY}|" web/config.js
+          if [ -z "${SUPABASE_URL}" ]; then
+            echo "::warning::SUPABASE_URL is unset — feedback and unsubscribe links will not record anything."
+          fi
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
         with:

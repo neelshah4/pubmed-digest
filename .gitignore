@@ -6,3 +6,4 @@ out/
 inspect.ts
 dbg.ts
 q.ts
+config.js

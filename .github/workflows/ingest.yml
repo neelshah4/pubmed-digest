@@ -33,6 +33,11 @@ permissions:
 jobs:
   ingest:
     runs-on: ubuntu-latest
+    # Job level, not step level: the commit step below also has to know whether
+    # Supabase is the store, and a step-scoped env would read as empty there.
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -74,9 +79,19 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f data/papers.json
+          # The paper cache only belongs in git when git IS the store. With Supabase
+          # configured it is already durable, and committing it would push megabytes
+          # of duplicated PubMed metadata on every run. The last-ingest stamp is
+          # still committed either way: that commit is what resets GitHub's 60-day
+          # inactivity clock on scheduled workflows.
+          mkdir -p data
+          date -u +%FT%TZ > data/last-ingest.txt
+          git add -f data/last-ingest.txt
+          if [ -z "${SUPABASE_URL:-}" ]; then
+            git add -f data/papers.json
+          fi
           if git diff --cached --quiet; then
-            echo "No changes to data/papers.json — nothing to commit."
+            echo "Nothing to commit."
           else
             git commit -m "chore: update PubMed papers archive [skip ci]"
             git push

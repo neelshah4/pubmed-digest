@@ -45,6 +45,13 @@ jobs:
       contains(github.event.issue.labels.*.name, 'subscription') &&
       github.event.issue.state == 'open'
     runs-on: ubuntu-latest
+    # cli-subscribe.ts persists through src/store.ts, which silently falls back
+    # to data/users.json when SUPABASE_URL is unset. On an ephemeral runner that
+    # file is discarded seconds later, so the subscriber would be told they are
+    # signed up and then never hear from us again.
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7

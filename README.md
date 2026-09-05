@@ -157,8 +157,32 @@ Phase 1 is built and verified end to end against live PubMed. State is file-back
 Supabase (auth + Postgres) is the phase-2 swap for multi-tenancy, and every function in
 `src/state.ts` maps 1:1 to a table so the change is local.
 
-**To put it online** the repo has to be reachable by GitHub Pages, which the free plan does
-not allow on a private repo. Three ways forward, in `tools/make-public.sh` and the build plan.
+### To put it online
+
+1. **Hosting.** GitHub Pages is not available on a private repo on the free plan. Either run
+   `tools/make-public.sh` (rewrites the two places a personal address appears, verifies, and
+   stops before the force-push), pay for GitHub Pro to keep it private, or serve `web/` from
+   Cloudflare Pages or Netlify.
+2. **Supabase.** Create a free project, run `supabase/schema.sql`, and follow
+   `docs/SUPABASE-SETUP.md`. Until `SUPABASE_URL` is set, every job silently falls back to the
+   local file store — which on an ephemeral runner means a subscriber is told they signed up
+   and then never hears from you again.
+3. **Repository secrets.**
+
+   | Secret | Used by | Required |
+   |---|---|---|
+   | `SUPABASE_URL` | ingest, digest, subscribe, pages | yes |
+   | `SUPABASE_SERVICE_KEY` | ingest, digest, subscribe | yes |
+   | `SUPABASE_ANON_KEY` | pages (browser config) | yes |
+   | `RESEND_API_KEY` | digest | to send |
+   | `MAIL_FROM` | digest | to send |
+   | `NCBI_API_KEY` | ingest | optional, 3/s → 10/s |
+
+   The anon key is public by design: every table it reaches is behind row-level security, and
+   the three write paths go through `SECURITY DEFINER` functions that authorise on a per-user
+   token. The service key must never appear in a deployed artifact.
+4. **Create the `subscription` label**, or GitHub will not auto-apply it to signup issues.
+5. **Sending domain** with SPF, DKIM and DMARC, plus one-click unsubscribe (already emitted).
 
 ---
 
