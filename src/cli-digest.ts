@@ -2,6 +2,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { existsSync, readFileSync } from 'node:fs';
 import { configFor, DEFAULT_PREFS } from './prefs.ts';
+import { feedbackBaseUrl, unsubscribeUrl, PUBLIC_BASE } from './urls.ts';
 import { buildDigest } from './score/score.ts';
 import { renderDigestHtml, renderDigestText, renderSubject } from './render/email.ts';
 import { papersSince, loadUsers, markSeen, hasSeen, loadProfile } from './state.ts';
@@ -41,8 +42,8 @@ for (const u of users) {
 
   const shown = [...d.authorPapers, ...d.practiceChanging, ...d.sections.flatMap((s) => s.papers)];
   const renderOpts = {
-    unsubscribeUrl: `https://example.invalid/unsubscribe?u=${u.id}`,
-    feedbackBaseUrl: 'https://example.invalid/feedback',
+    unsubscribeUrl: unsubscribeUrl(u),
+    feedbackBaseUrl: feedbackBaseUrl(),
     userEmail: u.email,
   };
   const html = renderDigestHtml(d, renderOpts);
