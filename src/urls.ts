@@ -12,10 +12,20 @@ export const PUBLIC_BASE = (process.env.PUBLIC_BASE ?? 'https://neelshah4.github
 
 export type FeedbackTag = 'star' | 'tilde' | 'skip';
 
-export const feedbackBaseUrl = (): string => `${PUBLIC_BASE}/action.html?a=feedback`;
+/**
+ * Base for the per-paper feedback links. Carries the user's token, because the
+ * reader clicking from an email is not authenticated: the database authorises
+ * these writes on the token, not on a session.
+ */
+export function feedbackBaseUrl(u: Pick<User, 'id' | 'unsubToken'>): string {
+  const q = new URLSearchParams({ a: 'feedback', u: u.id, t: u.unsubToken ?? '' });
+  return `${PUBLIC_BASE}/action.html?${q}`;
+}
 
-export function feedbackUrl(userId: string, pmid: string, tag: FeedbackTag): string {
-  const q = new URLSearchParams({ a: 'feedback', pmid, tag, u: userId });
+export function feedbackUrl(
+  u: Pick<User, 'id' | 'unsubToken'>, pmid: string, tag: FeedbackTag,
+): string {
+  const q = new URLSearchParams({ a: 'feedback', pmid, tag, u: u.id, t: u.unsubToken ?? '' });
   return `${PUBLIC_BASE}/action.html?${q}`;
 }
 

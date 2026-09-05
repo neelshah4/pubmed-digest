@@ -1,0 +1,105 @@
+name: "Digest subscription request"
+description: "Sign up for the critical care literature digest. No account, no external service — this repo processes the request and closes/locks the issue automatically."
+title: "[subscribe] "
+labels: ["subscription"]
+# Schema verified against GitHub's own docs this session (2026-09-05):
+# https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms
+#
+# Every `label:` string below is load-bearing: src/signup-parse.ts locates
+# each answer by matching "### <label>" in the rendered issue body, so
+# renaming a label here without updating FIELD_LABELS in that file breaks
+# parsing silently. Do not change one without the other.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Fill this out to subscribe. **This issue will be closed and locked immediately**
+        after it's processed, whether or not the request is valid — that's deliberate,
+        so an email address never sits in an open, public issue. If something below is
+        invalid, the bot leaves a comment explaining what to fix; open a new request with
+        the correction.
+
+  - type: input
+    id: email
+    attributes:
+      label: Email address
+      description: Where the digest gets sent.
+      placeholder: you@example.com
+    validations:
+      required: true
+
+  - type: dropdown
+    id: cadence
+    attributes:
+      label: Cadence
+      description: How often you want the digest delivered.
+      options:
+        - weekly
+        - monthly
+      default: 0
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: templates
+    attributes:
+      label: Specialty templates
+      description: >-
+        Pick at least one. Each template controls the journal list and topic filters
+        applied to your digest. peds-cc = Pediatric Critical Care, adult-cc = Adult
+        Critical Care, neurocrit = Neurocritical Care.
+      options:
+        - label: peds-cc
+        - label: adult-cc
+        - label: neurocrit
+
+  - type: dropdown
+    id: journal-tier
+    attributes:
+      label: Journal tier
+      description: Narrower tiers mean fewer, higher-signal papers.
+      options:
+        - tier1
+        - tier12
+        - all
+      default: 1
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: pub-types
+    attributes:
+      label: Publication types
+      description: >-
+        Leave all unchecked to include every study type. rct = Randomized Controlled
+        Trial, meta-analysis-systematic-review = Meta-Analysis / Systematic Review,
+        observational = Observational, practice-guideline = Practice Guideline.
+      options:
+        - label: rct
+        - label: meta-analysis-systematic-review
+        - label: observational
+        - label: practice-guideline
+
+  - type: input
+    id: extra-keywords
+    attributes:
+      label: Extra keywords
+      description: Comma-separated. Matched against title and abstract in addition to your templates.
+      placeholder: "e.g. driving pressure, EIT, VA ECMO"
+    validations:
+      required: false
+
+  - type: textarea
+    id: orcid-list
+    attributes:
+      label: Author ORCID watch list
+      description: >-
+        Optional. One ORCID iD per line, in the form 0000-0000-0000-0000. Optionally
+        follow it with a space and a display name — the name is never used for
+        matching, only shown back to you. Plain author names are not supported:
+        PubMed name search is too unreliable to use for a watch list.
+      placeholder: |
+        0000-0002-1825-0097
+        0000-0002-1825-009X Jane Doe
+    validations:
+      required: false

@@ -1,0 +1,101 @@
+name: Subscribe intake
+
+# Processes one .github/ISSUE_TEMPLATE/subscribe.yml submission: parse the
+# rendered issue body (src/signup-parse.ts owns the parsing — nothing here
+# reimplements it), write the subscriber into the local store, comment with
+# the outcome, then close and lock the issue so an email address never sits
+# in an open, public issue regardless of whether the request was valid.
+#
+# Triggers on "opened" (every new subscription request) and "edited" (a
+# defensive extra: if a maintainer or the requester edits the issue body
+# before this has run — e.g. to fix a typo the bot has not yet commented on —
+# this re-runs against the corrected text rather than the stale first read).
+# The `issues` event's supported activity types and the issue object's
+# body/number/state/labels[].name fields are documented here (fetched this
+# session, 2026-09-05):
+# https://docs.github.com/en/webhooks/webhook-events-and-payloads#issues
+#
+# Gating on the "subscription" label (rather than running for every issue in
+# the repo) requires that label to already exist in the repo: GitHub's own
+# Issue Forms docs say a form's `labels:` are "Auto-added if labels already
+# exist" — https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms
+# i.e. create the "subscription" label once (Settings -> Labels) before this
+# is live; subscribe.yml's issue template sets `labels: ["subscription"]` so
+# every request created from it carries the label from the moment it opens.
+#
+# `contains(array.*.name, 'x')` is GitHub's documented object-filter-plus-
+# contains() idiom for "does this array of {name: ...} objects include x":
+# https://docs.github.com/en/actions/learn-github-actions/expressions
+
+"on":
+  issues:
+    types: [opened, edited]
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: subscribe-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+jobs:
+  intake:
+    if: >-
+      contains(github.event.issue.labels.*.name, 'subscription') &&
+      github.event.issue.state == 'open'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+
+      # The issue body is untrusted, attacker-influenced text. It MUST reach
+      # the script only via `env:` (a real environment variable), never
+      # interpolated directly into `run:` shell text via `${{ }}` — that
+      # pattern is the classic GitHub Actions script-injection hole (the
+      # runner performs `${{ }}` template substitution into the script's
+      # *source* before the shell ever runs it). `env:` avoids that: the
+      # value only ever exists as a shell/Node variable, never as literal
+      # script text.
+      #
+      # src/cli-subscribe.ts (which calls src/signup-parse.ts — the only
+      # module that parses the body) does all of: parse, validate, write the
+      # subscriber into data/users.json (gitignored — see that file's own
+      # header comment for the privacy rationale and its phase-1 tradeoffs),
+      # and prepare the outcome comment as a FILE (COMMENT_FILE) so the
+      # `gh issue comment` step below never has to put user-supplied text
+      # into a shell string either.
+      - name: Parse, validate, and record the subscription
+        id: intake
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          COMMENT_FILE: ${{ runner.temp }}/subscribe-comment.md
+        run: node --experimental-strip-types src/cli-subscribe.ts
+
+      - name: Comment with the outcome
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue comment "${{ github.event.issue.number }}" \
+            --body-file "${{ runner.temp }}/subscribe-comment.md"
+
+      # Close and lock unconditionally (valid or not) — the whole point is
+      # that an email address never sits in an open issue. `--reason` values
+      # for `gh issue close` ({completed|not planned|duplicate}) and
+      # `gh issue lock` ({off_topic|resolved|spam|too_heated}) confirmed
+      # against `gh issue close --help` / `gh issue lock --help`, gh 2.98.0,
+      # which matches the version GitHub's ubuntu-latest (24.04) runner image
+      # documents as preinstalled:
+      # https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md
+      - name: Close and lock the issue
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue close "${{ github.event.issue.number }}" --reason "${{ steps.intake.outputs.close_reason }}"
+          gh issue lock "${{ github.event.issue.number }}" --reason resolved

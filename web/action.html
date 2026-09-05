@@ -98,12 +98,17 @@ async function post(path, body) {
 
 (async function main() {
   if (action === 'feedback') {
-    if (!/^\d{1,9}$/.test(pmid) || !TAGS[tag] || !user) return invalid('That feedback link is missing or malformed.');
+    if (!/^\d{1,9}$/.test(pmid) || !TAGS[tag] || !user || !token)
+      return invalid('That feedback link is missing or malformed.');
     $('title').textContent = TAGS[tag].title;
     $('lede').textContent = TAGS[tag].lede;
     $('paper').hidden = false;
     $('paper').textContent = `PMID ${pmid}`;
-    if (await post('feedback', { user_id: user, pmid, tag })) say('ok', 'Saved. Thanks — that genuinely changes what you get.');
+    // Goes through record_feedback(), which authorises on the token: a reader
+    // clicking from an email has no session, so a plain table insert would be
+    // refused by row-level security.
+    if (await post('rpc/record_feedback', { p_user: user, p_token: token, p_pmid: pmid, p_tag: tag }))
+      say('ok', 'Saved. Thanks — that genuinely changes what you get.');
 
   } else if (action === 'unsubscribe') {
     if (!user || !token) return invalid('That unsubscribe link is missing its token.');

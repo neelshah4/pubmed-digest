@@ -43,7 +43,7 @@ for (const u of users) {
   const shown = [...d.authorPapers, ...d.practiceChanging, ...d.sections.flatMap((s) => s.papers)];
   const renderOpts = {
     unsubscribeUrl: unsubscribeUrl(u),
-    feedbackBaseUrl: feedbackBaseUrl(),
+    feedbackBaseUrl: feedbackBaseUrl(u),
     userEmail: u.email,
   };
   const html = renderDigestHtml(d, renderOpts);
