@@ -148,3 +148,58 @@ export async function harvest(o: FetchOpts): Promise<Paper[]> {
   const pmids = await searchUnion(o);
   return fetchPapers(pmids, o);
 }
+
+// ---------------------------------------------------------------------------
+// Author watching
+// ---------------------------------------------------------------------------
+
+/** ORCID iD, bare form. Anything else is rejected rather than guessed at. */
+export const ORCID_RE = /^\d{4}-\d{4}-\d{4}-\d{3}[0-9X]$/;
+
+/**
+ * PMIDs for one followed author, in the last `days`.
+ *
+ * ORCID only. PubMed's plain author search ("Smith J[au]") collides across
+ * everyone sharing a surname and initial, and surfacing the wrong person's
+ * papers is worse than not offering the feature. The [auid] tag was verified
+ * against live E-utilities: 0000-0002-1825-0097[auid] returns records cleanly.
+ * https://pubmed.ncbi.nlm.nih.gov/help/
+ */
+export async function searchAuthor(orcid: string, o: Partial<FetchOpts> = {}): Promise<string[]> {
+  if (!ORCID_RE.test(orcid)) throw new Error(`Not a valid ORCID iD: "${orcid}"`);
+  const params = commonParams(o);
+  params.set('term', `${orcid}[auid]`);
+  params.set('retmode', 'json');
+  params.set('datetype', 'edat');
+  params.set('reldate', String(o.days ?? 7));
+  params.set('retmax', String(o.retmax ?? 200));
+  const raw = await postWithRetry('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi', params, o.apiKey);
+  try {
+    return JSON.parse(raw)?.esearchresult?.idlist ?? [];
+  } catch {
+    throw new Error(`ESearch returned unparseable JSON for ORCID ${orcid}`);
+  }
+}
+
+/**
+ * PMIDs for every followed author, keyed by ORCID.
+ *
+ * Sequential with the standard rate-limit delay. One author's failure must not
+ * lose the others, so failures are reported per-ORCID rather than thrown.
+ */
+export async function searchAuthors(
+  orcids: string[],
+  o: Partial<FetchOpts> = {},
+): Promise<{ byOrcid: Map<string, string[]>; failed: { orcid: string; error: string }[] }> {
+  const byOrcid = new Map<string, string[]>();
+  const failed: { orcid: string; error: string }[] = [];
+  for (const id of [...new Set(orcids)]) {
+    try {
+      byOrcid.set(id, await searchAuthor(id, o));
+    } catch (e) {
+      failed.push({ orcid: id, error: e instanceof Error ? e.message : String(e) });
+    }
+    await sleep(rateLimitDelay(o.apiKey));
+  }
+  return { byOrcid, failed };
+}

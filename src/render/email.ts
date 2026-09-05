@@ -169,6 +169,47 @@ function renderPracticeChanging(papers: ScoredPaper[], opts: { feedbackBaseUrl: 
   </td></tr>`;
 }
 
+
+/**
+ * Papers surfaced because the reader follows the author, not because the journal
+ * is on their whitelist. Rendered above the journal sections and labelled with
+ * the author, so it is obvious why an off-whitelist journal is in the digest.
+ */
+function renderAuthorPapers(
+  papers: ScoredPaper[],
+  opts: { feedbackBaseUrl: string; userId: string },
+): string {
+  if (papers.length === 0) return '';
+  const byAuthor = new Map<string, ScoredPaper[]>();
+  for (const sp of papers) {
+    const k = sp.authorMatch?.label || sp.authorMatch?.orcid || 'Followed author';
+    byAuthor.set(k, [...(byAuthor.get(k) ?? []), sp]);
+  }
+  const groups = [...byAuthor.entries()].map(([who, ps]) => `
+        <tr><td style="padding:2px 0 6px 0;font-family:${FONT};font-size:13px;font-weight:600;color:#3730a3;">
+          ${esc(who)}
+        </td></tr>
+        ${ps.map((sp) => renderPaper(sp, opts, 'normal')).join('')}`).join('');
+
+  return `
+  <tr>
+    <td style="padding:0 24px 8px 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+             style="border-left:4px solid #4f46e5;background-color:#eef2ff;">
+        <tr><td style="padding:14px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr><td style="padding:0 0 8px 0;font-family:${FONT};font-size:13px;font-weight:700;
+                           letter-spacing:0.06em;text-transform:uppercase;color:#3730a3;">
+              Authors you follow
+            </td></tr>
+            ${groups}
+          </table>
+        </td></tr>
+      </table>
+    </td>
+  </tr>`;
+}
+
 function renderBorderline(papers: ScoredPaper[], opts: { feedbackBaseUrl: string; userId: string }): string {
   if (papers.length === 0) return '';
   const rows = papers.map((sp) => renderPaper(sp, opts, 'borderline')).join('');
@@ -189,9 +230,12 @@ export function renderDigestHtml(
 ): string {
   const inner = { feedbackBaseUrl: opts.feedbackBaseUrl, userId: d.userId };
   const dateRange = formatDateRange(d.generatedAt, d.windowDays);
-  const statLine = `${d.totalCandidates} papers screened, ${d.totalAfterFilter} kept`;
+  const authorCount = (d.authorPapers ?? []).length;
+  const statLine = `${d.totalCandidates} papers screened, ${d.totalAfterFilter} kept`
+    + (authorCount ? `, ${authorCount} from authors you follow` : '');
 
   const practiceChangingHtml = renderPracticeChanging(d.practiceChanging, inner);
+  const authorHtml = renderAuthorPapers(d.authorPapers ?? [], inner);
   const sectionsHtml = d.sections.map((s) => renderSectionBlock(s.name, s.papers, inner)).join('');
   const borderlineHtml = renderBorderline(d.borderline, inner);
 
@@ -221,7 +265,7 @@ export function renderDigestHtml(
           </table>
         </td></tr>
 
-        ${practiceChangingHtml}
+        ${practiceChangingHtml}${authorHtml}
         ${sectionsHtml}
         ${borderlineHtml}
 
@@ -271,8 +315,17 @@ export function renderDigestText(
   const out: string[] = [];
   out.push('CRITICAL CARE LITERATURE DIGEST');
   out.push(formatDateRange(d.generatedAt, d.windowDays));
-  out.push(`${d.totalCandidates} papers screened, ${d.totalAfterFilter} kept`);
+  out.push(`${d.totalCandidates} papers screened, ${d.totalAfterFilter} kept`
+    + ((d.authorPapers ?? []).length ? `, ${(d.authorPapers ?? []).length} from authors you follow` : ''));
   out.push('');
+
+  if ((d.authorPapers ?? []).length > 0) {
+    out.push('AUTHORS YOU FOLLOW');
+    for (const sp of d.authorPapers) {
+      out.push(`[via ${sp.authorMatch?.label ?? sp.authorMatch?.orcid ?? 'followed author'}]`);
+      out.push(textPaper(sp, opts.feedbackBaseUrl, userId), '');
+    }
+  }
 
   if (d.practiceChanging.length > 0) {
     out.push('*** PRACTICE-CHANGING ***');

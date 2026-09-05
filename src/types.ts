@@ -50,6 +50,8 @@ export interface ScoredPaper {
   score: number;
   boosts: Record<string, number>;
   practiceChanging: boolean;
+  /** Set when the paper arrived via a followed author rather than the journal sweep. */
+  authorMatch?: { orcid: string; label?: string };
 }
 
 export type Verdict =
@@ -109,6 +111,24 @@ export interface LearnedProfile {
   [k: string]: unknown;
 }
 
+
+/** An author the user follows. ORCID only — PubMed name matching is too noisy to ship. */
+export interface AuthorWatch {
+  orcid: string;            // bare 0000-0000-0000-000X
+  label?: string;           // display name, user-supplied, never trusted for matching
+}
+
+/** Exactly what the signup form collects. The pipeline must honour every field. */
+export interface SignupPrefs {
+  email: string;
+  cadence: 'weekly' | 'monthly';
+  templates: string[];
+  journalTier: 'tier1' | 'tier12' | 'all';
+  pubTypes: string[];           // [] = no publication-type restriction
+  extraKeywords: string[];      // free text, OR-ed, boosts and admits
+  authors: AuthorWatch[];
+}
+
 export interface User {
   id: string;
   email: string;
@@ -116,10 +136,14 @@ export interface User {
   cadence: 'weekly' | 'monthly';
   llmTier: boolean;
   overrides?: Partial<WatcherConfig>;
+  prefs?: SignupPrefs;
+  verifiedAt?: string;          // double opt-in: unset means never send
+  unsubToken?: string;
 }
 
 export interface Digest {
   userId: string;
+  email?: string;
   generatedAt: string;
   windowDays: number;
   sections: { name: string; papers: ScoredPaper[] }[];
@@ -127,4 +151,6 @@ export interface Digest {
   borderline: ScoredPaper[];
   totalCandidates: number;
   totalAfterFilter: number;
+  /** Papers surfaced because a followed author wrote them. */
+  authorPapers: ScoredPaper[];
 }

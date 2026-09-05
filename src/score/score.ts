@@ -1,8 +1,9 @@
 /** Scoring formula, section assignment, and digest assembly (pubmed-watcher.md 111-151). */
-import type { Paper, ScoredPaper, Signals, WatcherConfig, Digest } from '../types.ts';
+import type { Paper, ScoredPaper, Signals, WatcherConfig, Digest, SignupPrefs } from '../types.ts';
 import { journalTier } from '../config.ts';
 import { detect, hit } from './detect.ts';
 import { filterPaper, isNonPrimary } from './filter.ts';
+import { matchesKeywords, passesPubTypeChoice } from '../prefs.ts';
 import { preferenceMatch } from './profile.ts';
 
 const TIER_SCORE: Record<number, number> = { 1: 1.0, 2: 0.8, 3: 0.5 };
@@ -67,12 +68,19 @@ export function assignSection(p: Paper, s: Signals, cfg: WatcherConfig): string 
   return bestHits > 0 ? bestName : 'Misc';
 }
 
-export function scorePaper(p: Paper, cfg: WatcherConfig): ScoredPaper | null {
+export function scorePaper(
+  p: Paper,
+  cfg: WatcherConfig,
+  opts: { bypassJournalGate?: boolean } = {},
+): ScoredPaper | null {
   const signals = detect(p, cfg);
-  const verdict = filterPaper(p, signals, cfg);
-  if (!verdict.keep) return null;
-
-  const tier = journalTier(cfg, p.journal)!;
+  if (!opts.bypassJournalGate) {
+    const verdict = filterPaper(p, signals, cfg);
+    if (!verdict.keep) return null;
+  }
+  // A followed author's paper is wanted wherever it appears, so an unlisted
+  // journal scores as Tier 3 rather than disqualifying the paper.
+  const tier = journalTier(cfg, p.journal) ?? 3;
   const w = cfg.scoring.weights;
   const pref = preferenceMatch(p, cfg.preference_profile.learned_profile);
 
@@ -102,9 +110,51 @@ export function scorePaper(p: Paper, cfg: WatcherConfig): ScoredPaper | null {
   return { paper: p, signals, tier, section: assignSection(p, signals, cfg), base, score, boosts, practiceChanging };
 }
 
-export function buildDigest(papers: Paper[], cfg: WatcherConfig, userId: string, windowDays: number): Digest {
-  const scored = papers.map((p) => scorePaper(p, cfg)).filter((x): x is ScoredPaper => x !== null);
+export function buildDigest(
+  papers: Paper[],
+  cfg: WatcherConfig,
+  userId: string,
+  windowDays: number,
+  opts: {
+    prefs?: SignupPrefs;
+    /** pmid -> the followed author who wrote it */
+    authorHits?: Map<string, { orcid: string; label?: string }>;
+    email?: string;
+  } = {},
+): Digest {
+  const { prefs, authorHits = new Map() } = opts;
+
+  const scored: ScoredPaper[] = [];
+  const authorPapers: ScoredPaper[] = [];
+
+  for (const p of papers) {
+    const watched = authorHits.get(p.pmid);
+    const sp = scorePaper(p, cfg, { bypassJournalGate: Boolean(watched) });
+    if (!sp) continue;
+
+    // The user's own keywords both admit and lift a paper.
+    if (prefs) {
+      const kw = matchesKeywords(p, prefs);
+      if (kw.length) {
+        sp.boosts.keyword = 1.25;
+        sp.score *= 1.25;
+        sp.signals.matched.user_keywords = kw;
+      }
+      // A publication-type choice is a restriction the user asked for, but it
+      // must never hide a paper by an author they explicitly follow.
+      if (!watched && !passesPubTypeChoice(p, prefs)) continue;
+    }
+
+    if (watched) {
+      sp.authorMatch = watched;
+      authorPapers.push(sp);
+    } else {
+      scored.push(sp);
+    }
+  }
+
   scored.sort((a, b) => b.score - a.score);
+  authorPapers.sort((a, b) => b.score - a.score);
 
   const cap = cfg.digest.hard_cap ?? 25;
   const perSecMax = cfg.digest.per_section_max ?? 5;
@@ -112,16 +162,18 @@ export function buildDigest(papers: Paper[], cfg: WatcherConfig, userId: string,
 
   const chosen: ScoredPaper[] = [];
   const perSec: Record<string, number> = {};
+  const takenPmids = new Set(authorPapers.map((a) => a.paper.pmid));
   let nonPrimary = 0;
   for (const sp of scored) {
     if (chosen.length >= cap) break;
+    if (takenPmids.has(sp.paper.pmid)) continue;   // already shown under its author
     if ((perSec[sp.section] ?? 0) >= perSecMax) continue;
     if (isNonPrimary(sp.paper)) { if (nonPrimary >= maxNonPrimary) continue; nonPrimary++; }
     chosen.push(sp);
     perSec[sp.section] = (perSec[sp.section] ?? 0) + 1;
   }
 
-  const borderline = scored.filter((s) => !chosen.includes(s)).slice(0, 3);
+  const borderline = scored.filter((s) => !chosen.includes(s) && !takenPmids.has(s.paper.pmid)).slice(0, 3);
 
   // Only the top 3 practice-changing get pinned; the rest stay in their sections
   // rather than vanishing from both places.
@@ -135,8 +187,9 @@ export function buildDigest(papers: Paper[], cfg: WatcherConfig, userId: string,
     .filter((s) => s.papers.length > 0);
 
   return {
-    userId, generatedAt: new Date().toISOString(), windowDays, sections,
+    userId, email: opts.email, generatedAt: new Date().toISOString(), windowDays, sections,
     practiceChanging: [...pinned],
-    borderline, totalCandidates: papers.length, totalAfterFilter: scored.length,
+    borderline, totalCandidates: papers.length, totalAfterFilter: scored.length + authorPapers.length,
+    authorPapers: authorPapers.slice(0, 10),
   };
 }
