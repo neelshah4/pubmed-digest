@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PubMed Digest</title>
+<style>
+  :root{
+    --bg:#f5f6f8; --surface:#fff; --text:#16191f; --text-muted:#565d6b;
+    --border:#d4d8de; --accent:#0b6e7f; --accent-strong:#084f5c; --accent-contrast:#fff;
+    --danger:#a32020; --danger-bg:#fdecec; --success:#146c37; --success-bg:#eaf6ee;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#14171c; --surface:#1c2027; --text:#eceff3; --text-muted:#a3abb8;
+           --border:#333a44; --accent:#4bb3c4; --accent-strong:#6cc9d8; --accent-contrast:#0d1013;
+           --danger:#ff9a9a; --danger-bg:#3a1f1f; --success:#8fdcaa; --success-bg:#16301f; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px;
+       background:var(--bg);color:var(--text);
+       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+       font-size:16px;line-height:1.55}
+  main{width:100%;max-width:520px;background:var(--surface);border:1px solid var(--border);
+       border-radius:10px;padding:32px}
+  h1{margin:0 0 8px;font-size:1.35rem;line-height:1.25}
+  p{margin:0 0 14px;color:var(--text-muted)}
+  .paper{padding:12px 14px;background:var(--bg);border:1px solid var(--border);
+         border-radius:8px;margin:16px 0;font-size:.93rem;color:var(--text)}
+  .status{padding:12px 14px;border-radius:8px;margin:16px 0;font-weight:500}
+  .status.ok{background:var(--success-bg);color:var(--success)}
+  .status.err{background:var(--danger-bg);color:var(--danger)}
+  .status.busy{background:var(--bg);color:var(--text-muted)}
+  a.btn{display:inline-block;padding:10px 18px;border-radius:8px;background:var(--accent);
+        color:var(--accent-contrast);text-decoration:none;font-weight:600}
+  a.btn:focus-visible,button:focus-visible{outline:3px solid var(--accent-strong);outline-offset:2px}
+  .muted{font-size:.82rem;color:var(--text-muted);margin-top:22px;border-top:1px solid var(--border);padding-top:14px}
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title">Working…</h1>
+  <p id="lede"></p>
+  <div id="paper" class="paper" hidden></div>
+  <div id="status" class="status busy" role="status" aria-live="polite">Contacting the server…</div>
+  <p><a class="btn" href="./index.html">Manage your subscription</a></p>
+  <p class="muted">
+    Courtesy of the U.S. National Library of Medicine. Not affiliated with or endorsed by NLM or NIH.
+  </p>
+</main>
+<script>
+// Set by the Pages deploy. Until then the page explains itself rather than failing silently.
+const SUPABASE_URL  = window.__SUPABASE_URL__  || '';
+const SUPABASE_ANON  = window.__SUPABASE_ANON__ || '';
+
+const q = new URLSearchParams(location.search);
+const action = (q.get('a') || '').toLowerCase();   // feedback | unsubscribe | confirm
+const pmid = q.get('pmid') || '';
+const tag = (q.get('tag') || '').toLowerCase();     // star | tilde | skip
+const user = q.get('u') || '';
+const token = q.get('t') || '';
+
+const $ = (id) => document.getElementById(id);
+const say = (cls, msg) => { const s = $('status'); s.className = 'status ' + cls; s.textContent = msg; };
+
+const TAGS = {
+  star:  { title: 'Marked as useful',  lede: 'More like this will rank higher in next week’s digest.' },
+  tilde: { title: 'Noted as borderline', lede: 'This nudges the ranking gently, not decisively.' },
+  skip:  { title: 'Got it — less like this', lede: 'Similar papers will be pushed down in future digests.' },
+};
+
+function invalid(msg) {
+  $('title').textContent = 'That link looks wrong';
+  $('lede').textContent = '';
+  say('err', msg);
+}
+
+async function post(path, body) {
+  if (!SUPABASE_URL || !SUPABASE_ANON) {
+    say('err', 'This deployment has no backend configured yet, so your click was not recorded. '
+      + 'Set SUPABASE_URL and SUPABASE_ANON in the Pages deploy.');
+    return false;
+  }
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
+      method: 'POST',
+      headers: { 'apikey': SUPABASE_ANON, 'authorization': `Bearer ${SUPABASE_ANON}`,
+                 'content-type': 'application/json', 'prefer': 'resolution=merge-duplicates' },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) { say('err', `The server rejected that (HTTP ${r.status}). Nothing was changed.`); return false; }
+    return true;
+  } catch {
+    // Distinguish a network/CORS failure from a real server response.
+    say('err', 'Could not reach the server. Check your connection and try the link again.');
+    return false;
+  }
+}
+
+(async function main() {
+  if (action === 'feedback') {
+    if (!/^\d{1,9}$/.test(pmid) || !TAGS[tag] || !user) return invalid('That feedback link is missing or malformed.');
+    $('title').textContent = TAGS[tag].title;
+    $('lede').textContent = TAGS[tag].lede;
+    $('paper').hidden = false;
+    $('paper').textContent = `PMID ${pmid}`;
+    if (await post('feedback', { user_id: user, pmid, tag })) say('ok', 'Saved. Thanks — that genuinely changes what you get.');
+
+  } else if (action === 'unsubscribe') {
+    if (!user || !token) return invalid('That unsubscribe link is missing its token.');
+    $('title').textContent = 'Unsubscribing…';
+    if (await post('rpc/unsubscribe', { p_user: user, p_token: token })) {
+      $('title').textContent = 'You are unsubscribed';
+      $('lede').textContent = 'No further digests will be sent to this address.';
+      say('ok', 'Done. You can resubscribe any time.');
+    }
+
+  } else if (action === 'confirm') {
+    if (!user || !token) return invalid('That confirmation link is missing its token.');
+    $('title').textContent = 'Confirming…';
+    if (await post('rpc/confirm_subscription', { p_user: user, p_token: token })) {
+      $('title').textContent = 'Subscription confirmed';
+      $('lede').textContent = 'Your first digest arrives on the next scheduled run.';
+      say('ok', 'Confirmed. Nothing else to do.');
+    }
+
+  } else {
+    invalid('This link needs an action. Open it from a digest email.');
+  }
+})();
+</script>
+</body>
+</html>

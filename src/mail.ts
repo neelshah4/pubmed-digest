@@ -42,10 +42,7 @@ const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 // BASE_URL once the signup/unsubscribe/confirm web app has a real domain.
 const BASE_URL = process.env.BASE_URL ?? 'https://example.invalid';
 
-// Retry tuning. Exposed via env so tests aren't stuck waiting on real backoff
-// delays; production just uses the defaults.
 const RETRY_ATTEMPTS = 3;
-const RETRY_BASE_MS = Number(process.env.MAIL_RETRY_BASE_MS ?? 300);
 
 function requireEnv(name: string): string {
   const v = process.env[name];
@@ -57,9 +54,14 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** attempt is 1-based. 300ms, 600ms, 1200ms, ... */
+/**
+ * attempt is 1-based: 300ms, 600ms, 1200ms, ... Read from env on every call
+ * (rather than cached at module load) so tests can override MAIL_RETRY_BASE_MS
+ * after import and aren't stuck waiting on production-length backoff delays.
+ */
 function backoffMs(attempt: number): number {
-  return RETRY_BASE_MS * 2 ** (attempt - 1);
+  const base = Number(process.env.MAIL_RETRY_BASE_MS ?? 300);
+  return base * 2 ** (attempt - 1);
 }
 
 /** "Name <addr@host>" -> "addr@host"; a bare address is returned unchanged. */

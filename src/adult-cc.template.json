@@ -454,21 +454,35 @@
     },
     "Neurocritical_Care": {
       "mesh_terms": [
+        "Brain Death",
         "Brain Injuries",
         "Brain Injuries, Traumatic",
-        "Status Epilepticus",
+        "Coma",
+        "Electroencephalography",
+        "Hypoxia-Ischemia, Brain",
         "Intracranial Hemorrhages",
-        "Subarachnoid Hemorrhage",
-        "Hypoxia-Ischemia, Brain"
+        "Neuroimaging",
+        "Seizures",
+        "Status Epilepticus",
+        "Subarachnoid Hemorrhage"
       ],
       "title_abstract_terms": [
-        "TBI",
-        "status epilepticus",
+        "EEG",
         "ICH",
-        "SAH",
         "ICP",
-        "post-arrest",
+        "SAH",
+        "TBI",
         "anoxic brain injury",
+        "brain death",
+        "delirium tremens",
+        "electroencephalography",
+        "encephalopathy",
+        "myoclonus",
+        "neuroimaging",
+        "neurologic outcome",
+        "post-arrest",
+        "seizure",
+        "status epilepticus",
         "targeted temperature management"
       ]
     },

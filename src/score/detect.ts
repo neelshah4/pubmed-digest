@@ -73,8 +73,15 @@ const CLINICAL_IMPLICATION_TA = ['management', 'treatment', 'therapy', 'interven
   'mortality', 'guideline', 'protocol-directed', 'bedside', 'clinical decision', 'triage', 'practice'];
 
 /** closes: filter step 4 "protocols / trial registrations" */
-const PROTOCOL_TA = ['study protocol', 'trial protocol', 'statistical analysis plan',
-  'protocol for a randomized', 'protocol for a randomised', 'rationale and design', 'trial registration'];
+/**
+ * closes: filter step 4 "protocols / trial registrations".
+ * These are matched against the TITLE only. Matching the abstract dropped three
+ * papers Neel had starred, because a completed RCT's abstract routinely ends
+ * "Trial registration: NCT…" — the phrase marks a real trial as often as a protocol.
+ */
+const PROTOCOL_TITLE = ['study protocol', 'trial protocol', 'statistical analysis plan',
+  'protocol for a randomized', 'protocol for a randomised', 'rationale and design',
+  'design and rationale', 'a protocol for'];
 
 // ---------------------------------------------------------------------------
 
@@ -139,23 +146,32 @@ export function detect(p: Paper, cfg: WatcherConfig): Signals {
   const covidHits = [...anyMesh(ms, COVID_MESH), ...anyHit(text, COVID_TA)];
   // "COVID-only" means COVID dominates, not merely appears. Require a title hit
   // or >=3 body mentions, and no competing CC topic carrying the paper.
+  // Title only. An abstract-density rule dropped a starred ARDS subphenotype
+  // paper that merely discussed COVID as one cause: a paper that is *about*
+  // COVID says so in its title.
   const covidInTitle = anyHit(norm(p.title), COVID_TA).length > 0;
-  const covidDensity = COVID_TA.reduce(
-    (n, t) => n + (text.match(new RegExp(t.replace(/[-]/g, '[- ]'), 'gi')) ?? []).length, 0);
   const covidOnly = rec('covid_only',
-    covidHits.length && (covidInTitle || covidDensity >= 3) && !ecmo && !eit ? covidHits : []);
+    covidInTitle && !ecmo && !eit && !pardsOrMechVent ? covidHits : []);
 
   const surgHits = anyHit(text, SURGICAL_TA);
   const ccOutcome = anyHit(text, CC_OUTCOME_TA);
   const surgicalTechnique = rec('surgical_technique',
     surgHits.length && ccOutcome.length === 0 ? surgHits : []);
 
-  const epiHits = anyHit(text, EPI_TA);
+  // Requires the epidemiology signal in the TITLE, no clinical-implication
+  // language anywhere, and no critical-care relevance. Matching the abstract
+  // alone dropped a starred neurocritical-care paper whose title merely opened
+  // with the word "Prevalence".
+  const epiHits = anyHit(norm(p.title), EPI_TA);
   const impl = anyHit(text, CLINICAL_IMPLICATION_TA);
-  const epiOnly = rec('epi_only', epiHits.length && impl.length === 0 ? epiHits : []);
+  const gateTerms = cfg.tier_3_cc_relevance_gate_criteria ?? { mesh_terms_any_of: [], title_abstract_any_of: [] };
+  const ccEvidence = [...anyMeshOrText(ms, text, gateTerms.mesh_terms_any_of),
+                      ...anyHit(text, gateTerms.title_abstract_any_of)];
+  const epiOnly = rec('epi_only',
+    epiHits.length && impl.length === 0 && ccEvidence.length === 0 ? epiHits : []);
 
   const isProtocol = rec('protocol', [
-    ...anyHit(text, PROTOCOL_TA),
+    ...anyHit(norm(p.title), PROTOCOL_TITLE),
     ...(p.pubTypes.includes('Clinical Trial Protocol') ? ['pt:Clinical Trial Protocol'] : []),
   ]);
 

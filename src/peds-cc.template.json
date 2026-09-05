@@ -1,5 +1,5 @@
 {
-  "_doc": "Configuration for the pubmed-watcher agent. Edit this file freely — the agent re-reads it on every run. Journal abbreviations follow PubMed's [ta] field. Add/remove journals here without touching the agent prompt.",
+  "_doc": "Configuration for the pubmed-watcher agent. Edit this file freely \u2014 the agent re-reads it on every run. Journal abbreviations follow PubMed's [ta] field. Add/remove journals here without touching the agent prompt.",
   "journals": {
     "tier_1_primary_cc": [
       "Am J Respir Crit Care Med",
@@ -20,7 +20,7 @@
       "Eur Respir J",
       "Cochrane Database Syst Rev"
     ],
-    "_tier_1_note": "Thorax moved out of Tier 1 per user preference (2026-05-16) — see per_journal_score_override. Eur Respir J kept in Tier 1 as primary respiratory journal.",
+    "_tier_1_note": "Thorax moved out of Tier 1 per user preference (2026-05-16) \u2014 see per_journal_score_override. Eur Respir J kept in Tier 1 as primary respiratory journal.",
     "tier_2_top_general_plus_adjacent": [
       "N Engl J Med",
       "JAMA",
@@ -77,7 +77,7 @@
       "BMC Nephrol",
       "BMC Anesthesiol"
     ],
-    "_tier_3_additions_note": "Added 2026-05-16 per user feedback: Thorax (moved from Tier 1 per user request), Eur J Pediatr and BMJ Paediatr Open (catch peds-CC papers that don't reach PCCM), Neurosurg Rev (catch neurocrit prognostic modeling). All retained only if they pass tier_3_cc_relevance_gate_criteria. 2026-07-16 gold-standard expansion (all [ta] verified via NCBI esearch): added J Am Med Inform Assoc, JAMIA Open, Cardiol Young, Pediatr Cardiol, Clin Neurophysiol, Ann Thorac Surg, Resusc Plus, Lancet Psychiatry, Sci Rep, Front Med (Lausanne), BMC Nephrol, BMC Anesthesiol — derived from Neel's June curated 'gold standard' picks (clinical informatics/AI, hemodynamic/perfusion monitoring, EEG/neuromonitoring, pediatric-cardiac ICU, resuscitation, nephrology). Broad-scope journals (Sci Rep, Front Med (Lausanne), JAMIA Open, BMC*) admit ONLY papers that pass tier_3_cc_relevance_gate_criteria."
+    "_tier_3_additions_note": "Added 2026-05-16 per user feedback: Thorax (moved from Tier 1 per user request), Eur J Pediatr and BMJ Paediatr Open (catch peds-CC papers that don't reach PCCM), Neurosurg Rev (catch neurocrit prognostic modeling). All retained only if they pass tier_3_cc_relevance_gate_criteria. 2026-07-16 gold-standard expansion (all [ta] verified via NCBI esearch): added J Am Med Inform Assoc, JAMIA Open, Cardiol Young, Pediatr Cardiol, Clin Neurophysiol, Ann Thorac Surg, Resusc Plus, Lancet Psychiatry, Sci Rep, Front Med (Lausanne), BMC Nephrol, BMC Anesthesiol \u2014 derived from Neel's June curated 'gold standard' picks (clinical informatics/AI, hemodynamic/perfusion monitoring, EEG/neuromonitoring, pediatric-cardiac ICU, resuscitation, nephrology). Broad-scope journals (Sci Rep, Front Med (Lausanne), JAMIA Open, BMC*) admit ONLY papers that pass tier_3_cc_relevance_gate_criteria."
   },
   "tier_3_cc_relevance_gate_criteria": {
     "_doc": "A Tier-3 paper is retained ONLY if at least one of these is true.",
@@ -176,16 +176,23 @@
   },
   "filters": {
     "language": "english",
-    "age_groups": ["adult", "pediatric", "neonatal"],
+    "age_groups": [
+      "adult",
+      "pediatric",
+      "neonatal"
+    ],
     "exclude_protocols_and_registrations": true,
     "observational_sample_size_floor": null,
     "rct_sample_size_floor": null,
     "meta_analysis_min_included_studies": 5,
     "suppression_rules": {
-      "_doc": "Per Q17 — papers matching any of these are dropped before scoring, regardless of journal/PT.",
+      "_doc": "Per Q17 \u2014 papers matching any of these are dropped before scoring, regardless of journal/PT.",
       "covid_only": {
         "rule": "Drop if title/abstract is primarily about COVID-19/SARS-CoV-2 AND not a guideline-grade update or sentinel trial",
-        "exceptions": ["Practice Guideline PT", "Cochrane Database Syst Rev journal"],
+        "exceptions": [
+          "Practice Guideline PT",
+          "Cochrane Database Syst Rev journal"
+        ],
         "rationale": "Q17 user pref: 4 years on, low marginal value"
       },
       "surgical_technique_no_cc_outcome": {
@@ -194,7 +201,11 @@
       },
       "public_health_or_epi_only": {
         "rule": "Drop if paper is descriptive epidemiology / surveillance / prevalence study with no clinical-care implication discussed",
-        "examples": ["road traffic injury epidemiology", "disease prevalence surveillance", "national burden estimates"],
+        "examples": [
+          "road traffic injury epidemiology",
+          "disease prevalence surveillance",
+          "national burden estimates"
+        ],
         "rationale": "Q17 user pref"
       }
     }
@@ -202,10 +213,10 @@
   "scoring": {
     "_doc": "Updated 2026-05-16 per user-preference Q&A. Observational raised (CC literature often observational-heavy). Pediatric boost +50%. ECMO +30%. PARDS/mech-vent +30%. Society guidelines boosted for SCCM/ESPNIC/ELSO/ATS/PALISI. See topic_boosts and suppression_rules for filters that fire before scoring. 2026-07-16: added study_type_score for Guideline/Review/Editorial/Letter/Case Reports and three topic_boosts (informatics/AI, hemodynamic monitoring, EIT).",
     "weights": {
-      "journal_tier": 0.40,
-      "study_type": 0.30,
-      "preference_match": 0.20,
-      "sample_size": 0.10
+      "journal_tier": 0.4,
+      "study_type": 0.3,
+      "preference_match": 0.2,
+      "sample_size": 0.1
     },
     "journal_tier_score": {
       "tier_1_primary_cc": 1.0,
@@ -222,48 +233,106 @@
       "Systematic Review": 0.9,
       "Multicenter Study": 0.8,
       "Observational Study": 0.8,
-      "Journal Article": 0.60,
+      "Journal Article": 0.6,
       "Review": 0.5,
       "Validation Study": 0.5,
       "Letter": 0.35,
-      "Editorial": 0.30,
-      "Case Reports": 0.30
+      "Editorial": 0.3,
+      "Case Reports": 0.3
     },
     "pediatric_neonatal_sample_size_floor": 0.4,
     "per_journal_score_override": {
-      "_doc": "Multiplier applied to journal_tier_score for specific journals. 1.0 = no change; <1.0 = deprioritize; >1.0 = boost. Use sparingly — these override the tier baseline.",
+      "_doc": "Multiplier applied to journal_tier_score for specific journals. 1.0 = no change; <1.0 = deprioritize; >1.0 = boost. Use sparingly \u2014 these override the tier baseline.",
       "Thorax": 0.75
     },
     "borderline_journals": {
-      "_doc": "Journals user has flagged as 'borderline interesting' — include but flag in digest with a [borderline] tag so user can quickly skim and decide.",
-      "Neurosurg Rev": "neurocrit prognostic modeling — relevant but not primary CC"
+      "_doc": "Journals user has flagged as 'borderline interesting' \u2014 include but flag in digest with a [borderline] tag so user can quickly skim and decide.",
+      "Neurosurg Rev": "neurocrit prognostic modeling \u2014 relevant but not primary CC"
     },
     "topic_boosts": {
       "_doc": "Multipliers applied to include_score AFTER base scoring. Topic detected via MeSH + abstract n-gram match. Pediatric boost stacks with topic boost.",
-      "pediatric": 1.50,
-      "ecmo": 1.30,
-      "pards_or_mech_vent": 1.30,
+      "pediatric": 1.5,
+      "ecmo": 1.3,
+      "pards_or_mech_vent": 1.3,
       "society_guideline": {
-        "boost": 1.40,
-        "societies": ["SCCM", "ESPNIC", "ELSO", "ATS", "PALISI", "American Thoracic Society", "European Society of Paediatric and Neonatal Intensive Care", "Society of Critical Care Medicine", "Extracorporeal Life Support Organization"],
+        "boost": 1.4,
+        "societies": [
+          "SCCM",
+          "ESPNIC",
+          "ELSO",
+          "ATS",
+          "PALISI",
+          "American Thoracic Society",
+          "European Society of Paediatric and Neonatal Intensive Care",
+          "Society of Critical Care Medicine",
+          "Extracorporeal Life Support Organization"
+        ],
         "detection": "Match in author affiliations OR title OR abstract phrasing like 'society guideline', 'consensus statement', endorsing society named"
       },
       "informatics_ai_in_cc": {
         "boost": 1.25,
-        "ngrams": ["machine learning", "deep learning", "artificial intelligence", "OMOP", "common data model", "clinical decision support", "predictive model", "natural language processing", "electronic health record", "informatics", "algorithm", "neural network", "large language model"],
-        "mesh": ["Artificial Intelligence", "Machine Learning", "Medical Informatics", "Decision Support Systems, Clinical", "Electronic Health Records"],
+        "ngrams": [
+          "machine learning",
+          "deep learning",
+          "artificial intelligence",
+          "OMOP",
+          "common data model",
+          "clinical decision support",
+          "predictive model",
+          "natural language processing",
+          "electronic health record",
+          "informatics",
+          "algorithm",
+          "neural network",
+          "large language model"
+        ],
+        "mesh": [
+          "Artificial Intelligence",
+          "Machine Learning",
+          "Medical Informatics",
+          "Decision Support Systems, Clinical",
+          "Electronic Health Records"
+        ],
         "detection": "Match any ngram in title/abstract OR any mesh term in the paper's MeSH headings"
       },
       "hemodynamic_perfusion_monitoring": {
-        "boost": 1.20,
-        "ngrams": ["VExUS", "venous excess", "capillary refill", "echocardiography", "point-of-care ultrasound", "POCUS", "critical closing pressure", "mean systemic filling pressure", "microcirculation", "fluid responsiveness", "pulse pressure variation", "venous congestion", "vascular waterfall"],
-        "mesh": ["Echocardiography", "Hemodynamics", "Microcirculation", "Ultrasonography"],
+        "boost": 1.2,
+        "ngrams": [
+          "VExUS",
+          "venous excess",
+          "capillary refill",
+          "echocardiography",
+          "point-of-care ultrasound",
+          "POCUS",
+          "critical closing pressure",
+          "mean systemic filling pressure",
+          "microcirculation",
+          "fluid responsiveness",
+          "pulse pressure variation",
+          "venous congestion",
+          "vascular waterfall"
+        ],
+        "mesh": [
+          "Echocardiography",
+          "Hemodynamics",
+          "Microcirculation",
+          "Ultrasonography"
+        ],
         "detection": "Match any ngram in title/abstract OR any mesh term in the paper's MeSH headings"
       },
       "eit_regional_ventilation": {
-        "boost": 1.30,
-        "ngrams": ["electrical impedance tomography", "EIT", "regional ventilation", "ventilation distribution", "recruitment-to-inflation", "end-expiratory lung volume"],
-        "mesh": ["Electric Impedance"],
+        "boost": 1.3,
+        "ngrams": [
+          "electrical impedance tomography",
+          "EIT",
+          "regional ventilation",
+          "ventilation distribution",
+          "recruitment-to-inflation",
+          "end-expiratory lung volume"
+        ],
+        "mesh": [
+          "Electric Impedance"
+        ],
         "detection": "Match any ngram in title/abstract OR any mesh term in the paper's MeSH headings"
       }
     }
@@ -284,15 +353,15 @@
       "tag": "[borderline]"
     },
     "summary_style": {
-      "_doc": "Per Q14: title + journal + 1-sentence practice impact ONLY when agent is ≥95% confident the impact claim is supported by the abstract. Otherwise: title + journal + PT only. No speculation, no hedging.",
-      "format_high_confidence": "Title (linked) — Journal, Year, PT. Practice impact: <one sentence backed by explicit abstract evidence>.",
-      "format_low_confidence": "Title (linked) — Journal, Year, PT.",
+      "_doc": "Per Q14: title + journal + 1-sentence practice impact ONLY when agent is \u226595% confident the impact claim is supported by the abstract. Otherwise: title + journal + PT only. No speculation, no hedging.",
+      "format_high_confidence": "Title (linked) \u2014 Journal, Year, PT. Practice impact: <one sentence backed by explicit abstract evidence>.",
+      "format_low_confidence": "Title (linked) \u2014 Journal, Year, PT.",
       "confidence_threshold": 0.95,
       "abstract_evidence_required": true
     },
     "practice_changing_flag": {
-      "_doc": "Per Q12 + Q19: [⚡ practice-changing] tag at top of digest. Fires only when paper meets at least ONE of the trigger criteria below.",
-      "tag": "[⚡ practice-changing]",
+      "_doc": "Per Q12 + Q19: [\u26a1 practice-changing] tag at top of digest. Fires only when paper meets at least ONE of the trigger criteria below.",
+      "tag": "[\u26a1 practice-changing]",
       "placement": "top_of_digest",
       "max_per_digest": 3,
       "triggers": [
@@ -302,7 +371,7 @@
         },
         {
           "name": "rct_hard_outcome_effect",
-          "rule": "RCT PT, sample size adequately powered (state N + outcome power calc), effect size ≥25% relative change on a hard outcome (mortality, ventilator-free days, AKI requiring RRT, LOS in ICU, neurologic outcome), CI excludes null"
+          "rule": "RCT PT, sample size adequately powered (state N + outcome power calc), effect size \u226525% relative change on a hard outcome (mortality, ventilator-free days, AKI requiring RRT, LOS in ICU, neurologic outcome), CI excludes null"
         },
         {
           "name": "multicenter_cohort_overturns_or_confirms_rct",
@@ -312,65 +381,347 @@
     }
   },
   "preference_profile": {
-    "_doc": "seed_examples is a list of PMIDs you previously found interesting — provided manually. learned_profile is updated by the agent each run from [star] and [skip] tags in prior digests. Leaving seed_examples empty means v1 falls back to journal-tier + study-type ranking with neutral preference_match (0.5).",
+    "_doc": "seed_examples is a list of PMIDs you previously found interesting \u2014 provided manually. learned_profile is updated by the agent each run from [star] and [skip] tags in prior digests. Leaving seed_examples empty means v1 falls back to journal-tier + study-type ranking with neutral preference_match (0.5).",
     "seed_examples_source": "Curated from /Users/neel/Downloads/Claude Sandbox/Clinical/M&M/03_literature/literature_review.md (M&M curated top-20, April 2026), PARDS PubMed export (.nbib, 2021), and targeted searches for recent pediatric ECMO/sedation RCTs. All PMIDs verified via PubMed MCP get_article_metadata 2026-05-16.",
-    "seed_examples_2026_07_source": "29 seeds appended 2026-07-16 from Neel's June 2026 curated 'gold standard' digest picks (provenance: resolved June pubmed-watcher digests). All 29 PMIDs re-verified via pubmed_eutils.py fetch on 2026-07-16 — each resolves to a real 2026 (one 2025) article. Span: ECMO/ECLS + informatics (OMOP), respiratory/ARDS + EIT, shock/sepsis, neuro/EEG, hemodynamic/perfusion monitoring (VExUS, capillary refill, echo), pediatric-cardiac, renal, and physiology-forward editorials/letters/reviews. These encode Neel's stated interests in clinical informatics/AI, hemodynamic monitoring, EIT/regional ventilation, and EEG/neuromonitoring.",
+    "seed_examples_2026_07_source": "29 seeds appended 2026-07-16 from Neel's June 2026 curated 'gold standard' digest picks (provenance: resolved June pubmed-watcher digests). All 29 PMIDs re-verified via pubmed_eutils.py fetch on 2026-07-16 \u2014 each resolves to a real 2026 (one 2025) article. Span: ECMO/ECLS + informatics (OMOP), respiratory/ARDS + EIT, shock/sepsis, neuro/EEG, hemodynamic/perfusion monitoring (VExUS, capillary refill, echo), pediatric-cardiac, renal, and physiology-forward editorials/letters/reviews. These encode Neel's stated interests in clinical informatics/AI, hemodynamic monitoring, EIT/regional ventilation, and EEG/neuromonitoring.",
     "seed_examples": [
-      {"pmid": "26492062", "topic": "PICU M&M / safety / QI", "note": "Cifra 2016 PCCM — PICU M&M transformation"},
-      {"pmid": "26492061", "topic": "PICU M&M / safety / QI", "note": "Frey 2016 PCCM — Swiss PICU M&M retrospective"},
-      {"pmid": "26581322", "topic": "Pediatric surgical QI", "note": "Cromeens 2015 J Pediatr Surg"},
-      {"pmid": "30747063", "topic": "Pediatric mortality committee", "note": "Offidani 2019 — 10-yr Bambino Gesù retrospective"},
-      {"pmid": "14657068", "topic": "M&M methodology landmark", "note": "Pierluissi 2003 JAMA"},
-      {"pmid": "22709684", "topic": "Surgical error taxonomy", "note": "Anderson 2012 — disorganized care"},
-      {"pmid": "28294382", "topic": "M&M scoping review", "note": "Benassi 2017 Med Educ"},
-      {"pmid": "33850805", "topic": "PICU sepsis / immunology", "note": "Yin 2021 — severe sepsis + neutropenia, biomarkers"},
-      {"pmid": "33841438", "topic": "MIS-C / pediatric inflammation", "note": "Caldarale 2021 Front Immunol — pDC depletion in MIS-C"},
-      {"pmid": "33834141", "topic": "PICU candidemia / burns", "note": "Sobouti 2020 — pediatric burn candidemia risk factors"},
-      {"pmid": "33802763", "topic": "Pediatric COVID therapeutics", "note": "Małecki 2021 — convalescent plasma in pediatric COVID"},
-      {"pmid": "41563418", "topic": "Pediatric ECMO / AKI long-term", "note": "Reynaud 2026 — KIDMO cohort, kidney/BP after pediatric ECMO"},
-      {"pmid": "41526758", "topic": "Neonatal dialysis / ECMO", "note": "Muff-Luett 2026 — COINED cohort, multicenter neonatal dialysis"},
-      {"pmid": "41734419", "topic": "PICU delirium prevention", "note": "Hamza Ek 2026 — eye masks/earplugs RCT in awake PICU pts"},
-      {"pmid": "42339164", "topic": "Informatics / OMOP / ECLS", "note": "JAMIA Open 2026 — extending the OMOP common data model for extracorporeal life support research"},
-      {"pmid": "42113209", "topic": "ECMO / AKI / CRRT consensus", "note": "Intensive Care Med 2026 — ADQI + ELSO consensus on ECMO, AKI, fluid balance, and CRRT"},
-      {"pmid": "41870561", "topic": "VA-ECMO physiology", "note": "Intensive Care Med 2026 — respiratory distress from cerebral hypercapnia on peripheral VA-ECMO despite preserved oxygenation"},
-      {"pmid": "42301734", "topic": "Pediatric ECMO / MODS", "note": "ASAIO J 2026 — patterns of multiple organ dysfunction in children on ECMO"},
-      {"pmid": "42063143", "topic": "VV-ECMO framework (review)", "note": "Crit Care 2026 — six phases of prolonged VV-ECMO, conceptual framework (narrative review)"},
-      {"pmid": "42383784", "topic": "Neonatal/infant ECMO cannulation", "note": "Pediatr Crit Care Med 2026 — multisite VV-ECMO cannulation in neonates/infants, ELSO database 2013-2023"},
-      {"pmid": "42085245", "topic": "ARDS lung mechanics / imaging", "note": "Am J Respir Crit Care Med 2026 — lung mechanics after PEEP reduction, 4D-CT in ARDS"},
-      {"pmid": "41738139", "topic": "EIT / pediatric ARDS", "note": "Am J Respir Crit Care Med 2026 — EIT-guided single-lung ventilation in a pediatric ARDS patient"},
-      {"pmid": "42149248", "topic": "ICU mobilization RCT", "note": "Intensive Care Med 2026 — RCT of out-of-bed armchair positioning on oxygenation in ICU patients"},
-      {"pmid": "42287717", "topic": "Respiratory drive / NIV", "note": "Am J Respir Crit Care Med 2026 — airway occlusions to measure inspiratory effort, drive, and mechanics during NIV"},
-      {"pmid": "42307570", "topic": "Bronchiolitis RCT (peds)", "note": "JAMA 2026 — PROPOSITIS RCT of prone positioning in infants with acute bronchiolitis"},
-      {"pmid": "42274006", "topic": "Septic shock RCT", "note": "N Engl J Med 2026 — vasopressors vs fluids in early septic shock"},
-      {"pmid": "41532812", "topic": "Pediatric sepsis (Phoenix)", "note": "Crit Care Med 2026 — Phoenix sepsis criteria/score performance in PICU, multicenter prospective"},
-      {"pmid": "42277950", "topic": "Septic shock catecholamines (review)", "note": "Crit Care 2026 — strategies to reduce catecholamine exposure in septic shock"},
-      {"pmid": "42343425", "topic": "Microcirculation / septic shock", "note": "Crit Care 2026 — inevitability of microvascular failure in septic shock and vasodilatory states"},
-      {"pmid": "41507672", "topic": "Pediatric neuromonitoring (EEG)", "note": "Neurocrit Care 2026 — EEG response to hypertonic saline and neurologic outcomes in pediatric acute brain injury"},
-      {"pmid": "41507673", "topic": "TBI CO2 reactivity", "note": "Neurocrit Care 2026 — visualizing/interpreting the CO2 reactivity index in TBI (observational)"},
-      {"pmid": "42202614", "topic": "EEG / sedation RCT", "note": "Clin Neurophysiol 2026 — midazolam vs propofol effect on EEG epileptiform detection, multicenter RCT"},
-      {"pmid": "42271517", "topic": "Neuro autoregulation", "note": "Crit Care 2026 — temporal dynamics of ICP/PRx/CPP/CPPopt vs outcome in cerebellar hemorrhage"},
-      {"pmid": "41430734", "topic": "VExUS / RV-PA coupling", "note": "Crit Care 2025 — VExUS and right-ventricular-to-pulmonary-artery uncoupling"},
-      {"pmid": "42403524", "topic": "Capillary refill / perfusion", "note": "Ann Intensive Care 2026 — capillary refill time and vascular waterfall response after cardiac surgery"},
-      {"pmid": "41954745", "topic": "Echo hemodynamics", "note": "Intensive Care Med 2026 — acute hemodynamic effects of dynamic left-ventricular outflow obstruction"},
-      {"pmid": "42360430", "topic": "Pediatric cardiac ICU / diuresis", "note": "Pediatr Cardiol 2026 — serum sodium vs urine output on furosemide, postoperative pediatric cardiac patients"},
-      {"pmid": "42331277", "topic": "CPR hemodynamics", "note": "Resuscitation 2026 — diastolic BP and end-tidal CO2 during adult ICU CPR, association with ROSC"},
-      {"pmid": "42267872", "topic": "Fluid balance measurement", "note": "Crit Care Explor 2026 — divergence between net-fluid and weight-based cumulative fluid balance, multicenter observational"},
-      {"pmid": "42316052", "topic": "RRT timing (AKI + sepsis)", "note": "BMC Nephrol 2026 — timing of renal-replacement therapy in AKI with sepsis, systematic review/meta-analysis"},
-      {"pmid": "42332144", "topic": "AI diagnostics (letter)", "note": "Nat Med 2026 — AI-enhanced diagnostics leading to heart transplantation (case letter)"},
-      {"pmid": "42259329", "topic": "Rapid tranquilisation (network MA)", "note": "Lancet Psychiatry 2026 — pharmacologic rapid tranquilisation in emergency settings, IPD network meta-analysis"},
-      {"pmid": "42283228", "topic": "Pediatric ICU nutrition RCT", "note": "JAMA 2026 — GASTRIC-PICU RCT of gastric residual volume assessment in critically ill children"}
+      {
+        "pmid": "26492062",
+        "topic": "PICU M&M / safety / QI",
+        "note": "Cifra 2016 PCCM \u2014 PICU M&M transformation"
+      },
+      {
+        "pmid": "26492061",
+        "topic": "PICU M&M / safety / QI",
+        "note": "Frey 2016 PCCM \u2014 Swiss PICU M&M retrospective"
+      },
+      {
+        "pmid": "26581322",
+        "topic": "Pediatric surgical QI",
+        "note": "Cromeens 2015 J Pediatr Surg"
+      },
+      {
+        "pmid": "30747063",
+        "topic": "Pediatric mortality committee",
+        "note": "Offidani 2019 \u2014 10-yr Bambino Ges\u00f9 retrospective"
+      },
+      {
+        "pmid": "14657068",
+        "topic": "M&M methodology landmark",
+        "note": "Pierluissi 2003 JAMA"
+      },
+      {
+        "pmid": "22709684",
+        "topic": "Surgical error taxonomy",
+        "note": "Anderson 2012 \u2014 disorganized care"
+      },
+      {
+        "pmid": "28294382",
+        "topic": "M&M scoping review",
+        "note": "Benassi 2017 Med Educ"
+      },
+      {
+        "pmid": "33850805",
+        "topic": "PICU sepsis / immunology",
+        "note": "Yin 2021 \u2014 severe sepsis + neutropenia, biomarkers"
+      },
+      {
+        "pmid": "33841438",
+        "topic": "MIS-C / pediatric inflammation",
+        "note": "Caldarale 2021 Front Immunol \u2014 pDC depletion in MIS-C"
+      },
+      {
+        "pmid": "33834141",
+        "topic": "PICU candidemia / burns",
+        "note": "Sobouti 2020 \u2014 pediatric burn candidemia risk factors"
+      },
+      {
+        "pmid": "33802763",
+        "topic": "Pediatric COVID therapeutics",
+        "note": "Ma\u0142ecki 2021 \u2014 convalescent plasma in pediatric COVID"
+      },
+      {
+        "pmid": "41563418",
+        "topic": "Pediatric ECMO / AKI long-term",
+        "note": "Reynaud 2026 \u2014 KIDMO cohort, kidney/BP after pediatric ECMO"
+      },
+      {
+        "pmid": "41526758",
+        "topic": "Neonatal dialysis / ECMO",
+        "note": "Muff-Luett 2026 \u2014 COINED cohort, multicenter neonatal dialysis"
+      },
+      {
+        "pmid": "41734419",
+        "topic": "PICU delirium prevention",
+        "note": "Hamza Ek 2026 \u2014 eye masks/earplugs RCT in awake PICU pts"
+      },
+      {
+        "pmid": "42339164",
+        "topic": "Informatics / OMOP / ECLS",
+        "note": "JAMIA Open 2026 \u2014 extending the OMOP common data model for extracorporeal life support research"
+      },
+      {
+        "pmid": "42113209",
+        "topic": "ECMO / AKI / CRRT consensus",
+        "note": "Intensive Care Med 2026 \u2014 ADQI + ELSO consensus on ECMO, AKI, fluid balance, and CRRT"
+      },
+      {
+        "pmid": "41870561",
+        "topic": "VA-ECMO physiology",
+        "note": "Intensive Care Med 2026 \u2014 respiratory distress from cerebral hypercapnia on peripheral VA-ECMO despite preserved oxygenation"
+      },
+      {
+        "pmid": "42301734",
+        "topic": "Pediatric ECMO / MODS",
+        "note": "ASAIO J 2026 \u2014 patterns of multiple organ dysfunction in children on ECMO"
+      },
+      {
+        "pmid": "42063143",
+        "topic": "VV-ECMO framework (review)",
+        "note": "Crit Care 2026 \u2014 six phases of prolonged VV-ECMO, conceptual framework (narrative review)"
+      },
+      {
+        "pmid": "42383784",
+        "topic": "Neonatal/infant ECMO cannulation",
+        "note": "Pediatr Crit Care Med 2026 \u2014 multisite VV-ECMO cannulation in neonates/infants, ELSO database 2013-2023"
+      },
+      {
+        "pmid": "42085245",
+        "topic": "ARDS lung mechanics / imaging",
+        "note": "Am J Respir Crit Care Med 2026 \u2014 lung mechanics after PEEP reduction, 4D-CT in ARDS"
+      },
+      {
+        "pmid": "41738139",
+        "topic": "EIT / pediatric ARDS",
+        "note": "Am J Respir Crit Care Med 2026 \u2014 EIT-guided single-lung ventilation in a pediatric ARDS patient"
+      },
+      {
+        "pmid": "42149248",
+        "topic": "ICU mobilization RCT",
+        "note": "Intensive Care Med 2026 \u2014 RCT of out-of-bed armchair positioning on oxygenation in ICU patients"
+      },
+      {
+        "pmid": "42287717",
+        "topic": "Respiratory drive / NIV",
+        "note": "Am J Respir Crit Care Med 2026 \u2014 airway occlusions to measure inspiratory effort, drive, and mechanics during NIV"
+      },
+      {
+        "pmid": "42307570",
+        "topic": "Bronchiolitis RCT (peds)",
+        "note": "JAMA 2026 \u2014 PROPOSITIS RCT of prone positioning in infants with acute bronchiolitis"
+      },
+      {
+        "pmid": "42274006",
+        "topic": "Septic shock RCT",
+        "note": "N Engl J Med 2026 \u2014 vasopressors vs fluids in early septic shock"
+      },
+      {
+        "pmid": "41532812",
+        "topic": "Pediatric sepsis (Phoenix)",
+        "note": "Crit Care Med 2026 \u2014 Phoenix sepsis criteria/score performance in PICU, multicenter prospective"
+      },
+      {
+        "pmid": "42277950",
+        "topic": "Septic shock catecholamines (review)",
+        "note": "Crit Care 2026 \u2014 strategies to reduce catecholamine exposure in septic shock"
+      },
+      {
+        "pmid": "42343425",
+        "topic": "Microcirculation / septic shock",
+        "note": "Crit Care 2026 \u2014 inevitability of microvascular failure in septic shock and vasodilatory states"
+      },
+      {
+        "pmid": "41507672",
+        "topic": "Pediatric neuromonitoring (EEG)",
+        "note": "Neurocrit Care 2026 \u2014 EEG response to hypertonic saline and neurologic outcomes in pediatric acute brain injury"
+      },
+      {
+        "pmid": "41507673",
+        "topic": "TBI CO2 reactivity",
+        "note": "Neurocrit Care 2026 \u2014 visualizing/interpreting the CO2 reactivity index in TBI (observational)"
+      },
+      {
+        "pmid": "42202614",
+        "topic": "EEG / sedation RCT",
+        "note": "Clin Neurophysiol 2026 \u2014 midazolam vs propofol effect on EEG epileptiform detection, multicenter RCT"
+      },
+      {
+        "pmid": "42271517",
+        "topic": "Neuro autoregulation",
+        "note": "Crit Care 2026 \u2014 temporal dynamics of ICP/PRx/CPP/CPPopt vs outcome in cerebellar hemorrhage"
+      },
+      {
+        "pmid": "41430734",
+        "topic": "VExUS / RV-PA coupling",
+        "note": "Crit Care 2025 \u2014 VExUS and right-ventricular-to-pulmonary-artery uncoupling"
+      },
+      {
+        "pmid": "42403524",
+        "topic": "Capillary refill / perfusion",
+        "note": "Ann Intensive Care 2026 \u2014 capillary refill time and vascular waterfall response after cardiac surgery"
+      },
+      {
+        "pmid": "41954745",
+        "topic": "Echo hemodynamics",
+        "note": "Intensive Care Med 2026 \u2014 acute hemodynamic effects of dynamic left-ventricular outflow obstruction"
+      },
+      {
+        "pmid": "42360430",
+        "topic": "Pediatric cardiac ICU / diuresis",
+        "note": "Pediatr Cardiol 2026 \u2014 serum sodium vs urine output on furosemide, postoperative pediatric cardiac patients"
+      },
+      {
+        "pmid": "42331277",
+        "topic": "CPR hemodynamics",
+        "note": "Resuscitation 2026 \u2014 diastolic BP and end-tidal CO2 during adult ICU CPR, association with ROSC"
+      },
+      {
+        "pmid": "42267872",
+        "topic": "Fluid balance measurement",
+        "note": "Crit Care Explor 2026 \u2014 divergence between net-fluid and weight-based cumulative fluid balance, multicenter observational"
+      },
+      {
+        "pmid": "42316052",
+        "topic": "RRT timing (AKI + sepsis)",
+        "note": "BMC Nephrol 2026 \u2014 timing of renal-replacement therapy in AKI with sepsis, systematic review/meta-analysis"
+      },
+      {
+        "pmid": "42332144",
+        "topic": "AI diagnostics (letter)",
+        "note": "Nat Med 2026 \u2014 AI-enhanced diagnostics leading to heart transplantation (case letter)"
+      },
+      {
+        "pmid": "42259329",
+        "topic": "Rapid tranquilisation (network MA)",
+        "note": "Lancet Psychiatry 2026 \u2014 pharmacologic rapid tranquilisation in emergency settings, IPD network meta-analysis"
+      },
+      {
+        "pmid": "42283228",
+        "topic": "Pediatric ICU nutrition RCT",
+        "note": "JAMA 2026 \u2014 GASTRIC-PICU RCT of gastric residual volume assessment in critically ill children"
+      }
     ],
     "learned_profile": {
-      "_doc": "positive_*/negative_* are the ACTIVE distributions preference_match uses (unioned with seed_examples). gold_seed_distribution is a PROTECTED floor bootstrapped 2026-07-16 from the 76-article June gold-standard corpus (titles + finding snippets; computed by scratchpad/compute_gold_profile.py, reproducible). The per-run writeback MUST merge new [star]/[skip] tag signal INTO positive_*/negative_* AND always re-union gold_seed_distribution — it must NEVER blank positive_* back to {} when a run has no new tags.",
+      "_doc": "positive_*/negative_* are the ACTIVE distributions preference_match uses (unioned with seed_examples). gold_seed_distribution is a PROTECTED floor bootstrapped 2026-07-16 from the 76-article June gold-standard corpus (titles + finding snippets; computed by scratchpad/compute_gold_profile.py, reproducible). The per-run writeback MUST merge new [star]/[skip] tag signal INTO positive_*/negative_* AND always re-union gold_seed_distribution \u2014 it must NEVER blank positive_* back to {} when a run has no new tags.",
       "gold_seed_distribution": {
         "protected": true,
         "source": "76-article June 2026 gold-standard reading list (Neel-curated); titles+snippets; computed 2026-07-16",
-        "positive_mesh_distribution": {"Extracorporeal Membrane Oxygenation": 41, "Respiration, Artificial": 30, "Heart Arrest": 18, "Hemodynamics": 18, "Respiratory Distress Syndrome": 15, "Sepsis": 11, "Acute Kidney Injury": 11, "Status Epilepticus": 8, "Intracranial Pressure": 8, "Electroencephalography": 6, "Medical Informatics": 6, "Heart Defects, Congenital": 6, "Shock, Septic": 5, "Prone Position": 4, "Bronchiolitis": 3, "Brain Injuries, Traumatic": 2, "Delirium": 2},
-        "positive_ngrams": {"extracorporeal": 18, "respiratory": 17, "cardiac": 14, "icu": 12, "pressure": 11, "ventilation": 11, "failure": 9, "injury": 9, "oxygenation": 8, "distress": 8, "extracorporeal membrane": 7, "respiratory distress": 7, "extracorporeal life": 7, "fluid": 7, "membrane": 7, "ecmo": 7, "lung": 7, "membrane oxygenation": 6, "shock": 6, "sodium": 6, "inspiratory": 6, "syndrome": 6, "resuscitation": 6, "ards": 6, "septic shock": 5, "hypertonic saline": 5, "cardiopulmonary resuscitation": 5, "vasopressors": 5, "septic": 5, "volume": 5, "hypertonic": 5, "saline": 5, "surgery": 5, "balance": 5, "continuous": 5, "positioning": 5}
+        "positive_mesh_distribution": {
+          "Extracorporeal Membrane Oxygenation": 41,
+          "Respiration, Artificial": 30,
+          "Heart Arrest": 18,
+          "Hemodynamics": 18,
+          "Respiratory Distress Syndrome": 15,
+          "Sepsis": 11,
+          "Acute Kidney Injury": 11,
+          "Status Epilepticus": 8,
+          "Intracranial Pressure": 8,
+          "Electroencephalography": 6,
+          "Medical Informatics": 6,
+          "Heart Defects, Congenital": 6,
+          "Shock, Septic": 5,
+          "Prone Position": 4,
+          "Bronchiolitis": 3,
+          "Brain Injuries, Traumatic": 2,
+          "Delirium": 2
+        },
+        "positive_ngrams": {
+          "extracorporeal": 18,
+          "respiratory": 17,
+          "cardiac": 14,
+          "icu": 12,
+          "pressure": 11,
+          "ventilation": 11,
+          "failure": 9,
+          "injury": 9,
+          "oxygenation": 8,
+          "distress": 8,
+          "extracorporeal membrane": 7,
+          "respiratory distress": 7,
+          "extracorporeal life": 7,
+          "fluid": 7,
+          "membrane": 7,
+          "ecmo": 7,
+          "lung": 7,
+          "membrane oxygenation": 6,
+          "shock": 6,
+          "sodium": 6,
+          "inspiratory": 6,
+          "syndrome": 6,
+          "resuscitation": 6,
+          "ards": 6,
+          "septic shock": 5,
+          "hypertonic saline": 5,
+          "cardiopulmonary resuscitation": 5,
+          "vasopressors": 5,
+          "septic": 5,
+          "volume": 5,
+          "hypertonic": 5,
+          "saline": 5,
+          "surgery": 5,
+          "balance": 5,
+          "continuous": 5,
+          "positioning": 5
+        }
       },
-      "positive_mesh_distribution": {"Extracorporeal Membrane Oxygenation": 41, "Respiration, Artificial": 30, "Heart Arrest": 18, "Hemodynamics": 18, "Respiratory Distress Syndrome": 15, "Sepsis": 11, "Acute Kidney Injury": 11, "Status Epilepticus": 8, "Intracranial Pressure": 8, "Electroencephalography": 6, "Medical Informatics": 6, "Heart Defects, Congenital": 6, "Shock, Septic": 5, "Prone Position": 4, "Bronchiolitis": 3, "Brain Injuries, Traumatic": 2, "Delirium": 2},
+      "positive_mesh_distribution": {
+        "Extracorporeal Membrane Oxygenation": 41,
+        "Respiration, Artificial": 30,
+        "Heart Arrest": 18,
+        "Hemodynamics": 18,
+        "Respiratory Distress Syndrome": 15,
+        "Sepsis": 11,
+        "Acute Kidney Injury": 11,
+        "Status Epilepticus": 8,
+        "Intracranial Pressure": 8,
+        "Electroencephalography": 6,
+        "Medical Informatics": 6,
+        "Heart Defects, Congenital": 6,
+        "Shock, Septic": 5,
+        "Prone Position": 4,
+        "Bronchiolitis": 3,
+        "Brain Injuries, Traumatic": 2,
+        "Delirium": 2
+      },
       "negative_mesh_distribution": {},
-      "positive_ngrams": {"extracorporeal": 18, "respiratory": 17, "cardiac": 14, "icu": 12, "pressure": 11, "ventilation": 11, "failure": 9, "injury": 9, "oxygenation": 8, "distress": 8, "extracorporeal membrane": 7, "respiratory distress": 7, "extracorporeal life": 7, "fluid": 7, "membrane": 7, "ecmo": 7, "lung": 7, "membrane oxygenation": 6, "shock": 6, "sodium": 6, "inspiratory": 6, "syndrome": 6, "resuscitation": 6, "ards": 6, "septic shock": 5, "hypertonic saline": 5, "cardiopulmonary resuscitation": 5, "vasopressors": 5, "septic": 5, "volume": 5, "hypertonic": 5, "saline": 5, "surgery": 5, "balance": 5, "continuous": 5, "positioning": 5},
+      "positive_ngrams": {
+        "extracorporeal": 18,
+        "respiratory": 17,
+        "cardiac": 14,
+        "icu": 12,
+        "pressure": 11,
+        "ventilation": 11,
+        "failure": 9,
+        "injury": 9,
+        "oxygenation": 8,
+        "distress": 8,
+        "extracorporeal membrane": 7,
+        "respiratory distress": 7,
+        "extracorporeal life": 7,
+        "fluid": 7,
+        "membrane": 7,
+        "ecmo": 7,
+        "lung": 7,
+        "membrane oxygenation": 6,
+        "shock": 6,
+        "sodium": 6,
+        "inspiratory": 6,
+        "syndrome": 6,
+        "resuscitation": 6,
+        "ards": 6,
+        "septic shock": 5,
+        "hypertonic saline": 5,
+        "cardiopulmonary resuscitation": 5,
+        "vasopressors": 5,
+        "septic": 5,
+        "volume": 5,
+        "hypertonic": 5,
+        "saline": 5,
+        "surgery": 5,
+        "balance": 5,
+        "continuous": 5,
+        "positioning": 5
+      },
       "negative_ngrams": {},
       "last_updated": "2026-07-16",
       "history_window_weeks": 12
@@ -378,37 +729,140 @@
   },
   "sections": {
     "ECMO": {
-      "mesh_terms": ["Extracorporeal Membrane Oxygenation"],
-      "title_abstract_terms": ["ECMO", "VA-ECMO", "VV-ECMO", "ECLS", "extracorporeal life support", "mechanical circulatory support"]
+      "mesh_terms": [
+        "Extracorporeal Membrane Oxygenation"
+      ],
+      "title_abstract_terms": [
+        "ECMO",
+        "VA-ECMO",
+        "VV-ECMO",
+        "ECLS",
+        "extracorporeal life support",
+        "mechanical circulatory support"
+      ]
     },
     "Respiratory_ARDS": {
-      "mesh_terms": ["Respiratory Distress Syndrome", "Respiration, Artificial", "Ventilator-Induced Lung Injury", "Positive-Pressure Respiration"],
-      "title_abstract_terms": ["ARDS", "mechanical ventilation", "VILI", "prone position", "PEEP", "oxygenation", "weaning", "extubation", "high-flow nasal oxygen", "NIV"]
+      "mesh_terms": [
+        "Respiratory Distress Syndrome",
+        "Respiration, Artificial",
+        "Ventilator-Induced Lung Injury",
+        "Positive-Pressure Respiration"
+      ],
+      "title_abstract_terms": [
+        "ARDS",
+        "mechanical ventilation",
+        "VILI",
+        "prone position",
+        "PEEP",
+        "oxygenation",
+        "weaning",
+        "extubation",
+        "high-flow nasal oxygen",
+        "NIV"
+      ]
     },
     "Shock_Sepsis": {
-      "mesh_terms": ["Sepsis", "Shock, Septic", "Shock", "Systemic Inflammatory Response Syndrome"],
-      "title_abstract_terms": ["septic shock", "vasopressor", "norepinephrine", "fluid resuscitation", "lactate", "early goal-directed", "balanced crystalloid"]
+      "mesh_terms": [
+        "Sepsis",
+        "Shock, Septic",
+        "Shock",
+        "Systemic Inflammatory Response Syndrome"
+      ],
+      "title_abstract_terms": [
+        "septic shock",
+        "vasopressor",
+        "norepinephrine",
+        "fluid resuscitation",
+        "lactate",
+        "early goal-directed",
+        "balanced crystalloid"
+      ]
     },
     "Neurocritical_Care": {
-      "mesh_terms": ["Brain Injuries", "Brain Injuries, Traumatic", "Status Epilepticus", "Intracranial Hemorrhages", "Subarachnoid Hemorrhage", "Hypoxia-Ischemia, Brain"],
-      "title_abstract_terms": ["TBI", "status epilepticus", "ICH", "SAH", "ICP", "post-arrest", "anoxic brain injury", "targeted temperature management"]
+      "mesh_terms": [
+        "Brain Death",
+        "Brain Injuries",
+        "Brain Injuries, Traumatic",
+        "Coma",
+        "Electroencephalography",
+        "Hypoxia-Ischemia, Brain",
+        "Intracranial Hemorrhages",
+        "Neuroimaging",
+        "Seizures",
+        "Status Epilepticus",
+        "Subarachnoid Hemorrhage"
+      ],
+      "title_abstract_terms": [
+        "EEG",
+        "ICH",
+        "ICP",
+        "SAH",
+        "TBI",
+        "anoxic brain injury",
+        "brain death",
+        "delirium tremens",
+        "electroencephalography",
+        "encephalopathy",
+        "myoclonus",
+        "neuroimaging",
+        "neurologic outcome",
+        "post-arrest",
+        "seizure",
+        "status epilepticus",
+        "targeted temperature management"
+      ]
     },
     "Cardiac_CC": {
-      "mesh_terms": ["Shock, Cardiogenic", "Heart Arrest"],
-      "title_abstract_terms": ["cardiogenic shock", "CICU", "post-cardiac-arrest", "mechanical circulatory support", "Impella", "IABP", "VT storm"]
+      "mesh_terms": [
+        "Shock, Cardiogenic",
+        "Heart Arrest"
+      ],
+      "title_abstract_terms": [
+        "cardiogenic shock",
+        "CICU",
+        "post-cardiac-arrest",
+        "mechanical circulatory support",
+        "Impella",
+        "IABP",
+        "VT storm"
+      ]
     },
     "Renal": {
-      "mesh_terms": ["Acute Kidney Injury", "Renal Replacement Therapy", "Continuous Renal Replacement Therapy"],
-      "title_abstract_terms": ["AKI", "CRRT", "RRT", "nephrotoxicity", "fluid balance"]
+      "mesh_terms": [
+        "Acute Kidney Injury",
+        "Renal Replacement Therapy",
+        "Continuous Renal Replacement Therapy"
+      ],
+      "title_abstract_terms": [
+        "AKI",
+        "CRRT",
+        "RRT",
+        "nephrotoxicity",
+        "fluid balance"
+      ]
     },
     "Misc": {
-      "mesh_terms": ["Delirium", "Critical Illness", "Palliative Care", "Nutritional Support"],
-      "title_abstract_terms": ["ICU delirium", "ICU-acquired weakness", "sedation", "early mobility", "family-centered care", "ICU nutrition", "PADIS", "palliative care in ICU"]
+      "mesh_terms": [
+        "Delirium",
+        "Critical Illness",
+        "Palliative Care",
+        "Nutritional Support"
+      ],
+      "title_abstract_terms": [
+        "ICU delirium",
+        "ICU-acquired weakness",
+        "sedation",
+        "early mobility",
+        "family-centered care",
+        "ICU nutrition",
+        "PADIS",
+        "palliative care in ICU"
+      ]
     }
   },
   "schedule": {
     "cron": "0 7 * * 1",
     "timezone": "America/Chicago",
-    "_doc": "NOTE (2026-07-16): this cron field is NOT wired — it is a placeholder only. The REAL live trigger is a launchd job `com.neel.pubmed-digest` firing Sunday 22:00 America/Chicago. Do not assume the Monday 07:00 cron above drives the pipeline; update the launchd plist to change the schedule."
+    "_doc": "NOTE (2026-07-16): this cron field is NOT wired \u2014 it is a placeholder only. The REAL live trigger is a launchd job `com.neel.pubmed-digest` firing Sunday 22:00 America/Chicago. Do not assume the Monday 07:00 cron above drives the pipeline; update the launchd plist to change the schedule."
   }
 }
