@@ -1,0 +1,45 @@
+name: digest
+
+on:
+  schedule:
+    - cron: '23 11 * * 1'          # Mondays 11:23 UTC, off the hour
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Render only, do not send'
+        type: boolean
+        required: false
+        default: true
+
+concurrency:
+  group: digest
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Build and send digests
+        env:
+          # Scheduled runs send. Manual runs default to dry.
+          DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || (github.event.inputs.dry_run || 'true') }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          MAIL_FROM: ${{ secrets.MAIL_FROM }}
+        run: npm run digest
+
+      # A dry run is inspectable without anyone receiving mail.
+      - name: Upload rendered digests
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendered-digests
+          path: out/
+          retention-days: 14

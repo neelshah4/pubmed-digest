@@ -805,11 +805,16 @@
           .catch(function () { return null; })
           .then(function (body) {
             const msg = (body && (body.message || body.error)) || ("Something went wrong (HTTP " + res.status + ").");
-            throw new Error(msg);
+            const httpErr = new Error(msg);
+            httpErr.isHttpError = true; // came from a real server response, safe to show verbatim
+            throw httpErr;
           });
       })
       .catch(function (err) {
-        const message = err && err.message
+        // Only surface the server's own message when we actually got a response.
+        // A network/CORS/DNS failure throws a generic TypeError ("Failed to fetch" or
+        // similar, wording varies by browser) — show one consistent message for that instead.
+        const message = err && err.isHttpError && err.message
           ? err.message
           : "Could not reach the server. Check your connection and try again.";
         showBanner("error", message);

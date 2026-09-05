@@ -1,0 +1,52 @@
+name: ingest
+
+# 03:23 UTC, deliberately off the top of the hour: GitHub documents that
+# scheduled workflows may be delayed or dropped during periods of high load,
+# which cluster on the hour.
+# https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule
+on:
+  schedule:
+    - cron: '23 3 * * *'
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Lookback window in days'
+        required: false
+        default: '7'
+
+concurrency:
+  group: ingest
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Pull and cache new records
+        env:
+          DAYS: ${{ github.event.inputs.days || '7' }}
+          RETMAX: '3000'
+          NCBI_API_KEY: ${{ secrets.NCBI_API_KEY }}   # optional: 3/s -> 10/s
+          NCBI_EMAIL: ${{ secrets.NCBI_EMAIL }}
+        run: npm run ingest
+
+      # This commit is load-bearing, not cosmetic. Scheduled workflows in a
+      # PUBLIC repo are automatically disabled after 60 days of no repository
+      # activity; writing the archive back each run resets that clock.
+      # https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows#schedule
+      - name: Commit archive
+        run: |
+          git config user.name  "pubmed-digest[bot]"
+          git config user.email "pubmed-digest[bot]@users.noreply.github.com"
+          mkdir -p data
+          date -u +%FT%TZ > data/last-ingest.txt
+          git add -f data/last-ingest.txt data/papers.json 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "ingest: $(date -u +%F)"
+          git push
