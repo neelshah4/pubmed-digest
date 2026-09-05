@@ -28,19 +28,24 @@
  *
  * Mailgun's AUP double-opt-in requirement (never email an unconfirmed
  * address) is enforced in sendDigest itself — see the verifiedAt check below.
+ *
+ * unsubscribeUrl/confirmUrl are re-exported from ./urls.ts rather than built
+ * here a second time: urls.ts is this repo's single source of truth for
+ * public link shapes precisely so the digest body link, the List-Unsubscribe
+ * header, and the confirmation email can't drift apart. (Its PUBLIC_BASE
+ * currently points at a GitHub Pages URL that 404s — no Pages-deploy workflow
+ * exists yet — so links are correct in shape but not yet live; that's a gap
+ * in urls.ts/the Pages setup, outside this file's scope.)
  */
 import { randomUUID } from 'node:crypto';
 import type { Digest, User } from './types.ts';
 import { renderSubject } from './render/email.ts';
+import { unsubscribeUrl, confirmUrl, unsubscribeMailto } from './urls.ts';
 
+export { unsubscribeUrl, confirmUrl };
 export interface SendResult { ok: boolean; id?: string; status: number; error?: string }
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
-
-// Placeholder host, matching the convention already used elsewhere in this repo
-// (src/cli-digest.ts, web/index.html) for the not-yet-deployed web app. Set
-// BASE_URL once the signup/unsubscribe/confirm web app has a real domain.
-const BASE_URL = process.env.BASE_URL ?? 'https://example.invalid';
 
 const RETRY_ATTEMPTS = 3;
 
@@ -64,39 +69,19 @@ function backoffMs(attempt: number): number {
   return base * 2 ** (attempt - 1);
 }
 
-/** "Name <addr@host>" -> "addr@host"; a bare address is returned unchanged. */
-function bareAddress(from: string): string {
-  const m = from.match(/<([^>]+)>/);
-  return m ? m[1] : from;
-}
-
 // ---------------------------------------------------------------------------
 // Tokens & links
 // ---------------------------------------------------------------------------
 
 /**
- * A fresh unguessable per-user token for unsubscribe/confirm links. Uses
- * node:crypto randomUUID() (CSPRNG-backed, RFC 4122 v4) rather than deriving
- * anything from the email address — an email-derived token would let anyone
- * who knows (or guesses) an address unsubscribe or "confirm" it.
+ * A fresh unguessable per-user token for unsubscribe/confirm links (urls.ts
+ * consumes u.unsubToken but does not mint it). Uses node:crypto randomUUID()
+ * (CSPRNG-backed, RFC 4122 v4) rather than deriving anything from the email
+ * address — an email-derived token would let anyone who knows (or guesses)
+ * an address unsubscribe or "confirm" it.
  */
 export function generateUnsubToken(): string {
   return randomUUID();
-}
-
-function requireToken(u: User): string {
-  if (!u.unsubToken) throw new Error(`[mail] user ${u.id} has no unsubToken`);
-  return u.unsubToken;
-}
-
-export function unsubscribeUrl(u: User): string {
-  const t = requireToken(u);
-  return `${BASE_URL}/unsubscribe?u=${encodeURIComponent(u.id)}&t=${encodeURIComponent(t)}`;
-}
-
-export function confirmUrl(u: User): string {
-  const t = requireToken(u);
-  return `${BASE_URL}/confirm?u=${encodeURIComponent(u.id)}&t=${encodeURIComponent(t)}`;
 }
 
 /**
@@ -109,14 +94,14 @@ export function confirmUrl(u: User): string {
  *     mailto+https form).
  *   - Google (support.google.com/a/answer/14229414) requires exactly this
  *     for any bulk sender, and explicitly disqualifies a mailto-only header.
- * The https URL is the one-click target; the mailto is the RFC-permitted
- * fallback for a client that only understands the older List-Unsubscribe.
+ * The https URL (from urls.ts, the same one rendered as the visible body
+ * link) is the one-click target; the mailto (also urls.ts) is the RFC-
+ * permitted fallback for a client that only understands the older
+ * List-Unsubscribe.
  */
-function unsubscribeHeaders(u: User, from: string): Record<string, string> {
-  const https = unsubscribeUrl(u);
-  const mailto = `mailto:${bareAddress(from)}?subject=${encodeURIComponent(`unsubscribe ${u.id}`)}`;
+function unsubscribeHeaders(u: User): Record<string, string> {
   return {
-    'List-Unsubscribe': `<${https}>, <${mailto}>`,
+    'List-Unsubscribe': `<${unsubscribeUrl(u)}>, <${unsubscribeMailto(u)}>`,
     'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
   };
 }
@@ -217,7 +202,7 @@ export async function sendDigest(u: User, d: Digest, html: string, text: string)
     // Required on every digest (bulk/promotional mail) per Google's bulk-sender
     // rules; NOT sent on the transactional confirmation email below, which
     // Google's own guidance excludes from the one-click requirement.
-    headers: unsubscribeHeaders(u, from),
+    headers: unsubscribeHeaders(u),
   };
   return postToResend(apiKey, body);
 }

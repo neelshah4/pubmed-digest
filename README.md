@@ -12,8 +12,15 @@ weekly, or monthly, up to 200 hits. Two things they don't do:
 2. **Curate.** You get a blank query box. No maintained journal whitelist, no suppression rules,
    no sense of which of the 1,597 papers published in your journals this week actually matter.
 
-This does both, plus it learns: every paper carries one-click `★ / ~ / skip` links, and those
-tags shift next week's ranking.
+This does both, plus two things NLM has no equivalent for:
+
+- **Follow people, not just topics.** Give it an ORCID iD and you get that author's new work
+  wherever it appears — including journals outside your whitelist. Watching one cardiologist
+  surfaced papers in *Eur J Heart Fail*, which is deliberately not in the critical-care list.
+  Plain-name author search is not offered on purpose: "Smith J[au]" collides across everyone
+  sharing a surname, and showing you the wrong person's papers is worse than no feature.
+- **It learns.** Every paper carries one-click `★ / ~ / skip` links, and those tags shift next
+  week's ranking.
 
 ## How it works
 
@@ -59,6 +66,17 @@ informatics/AI ×1.25, hemodynamics ×1.20, EIT ×1.30, plus per-journal overrid
 
 Boosts stack, so a pediatric ECMO paper in a Tier-3 journal can beat a Tier-1 adult observational
 study. That's intentional.
+
+### What you can subscribe to
+
+| Choice | Effect |
+|---|---|
+| Specialty template | Peds CC (curated), Adult CC, Neurocritical Care |
+| Journal tier | Tier 1 only (17), Tiers 1–2 (26), or all (69) |
+| Publication types | RCT, meta-analysis/systematic review, observational, guideline. Empty means no restriction |
+| Keywords | Free text. Admits and boosts matching papers ×1.25 |
+| Authors | ORCID iDs. Bypasses the journal whitelist and any publication-type restriction |
+| Cadence | Weekly or monthly |
 
 ### Personalization without a model
 
@@ -109,10 +127,38 @@ npm test
 `DRY_RUN=false` sends for real and requires `RESEND_API_KEY` and `MAIL_FROM`.
 `NCBI_API_KEY` is optional; it raises the rate limit from 3/s to 10/s.
 
+## Is it faithful to the system it replaces?
+
+`tools/parity.ts` re-fetches the PMIDs from a real archived digest, re-scores them, and
+checks the port against what the original agent actually produced.
+
+```bash
+node --experimental-strip-types tools/parity.ts ~/.claude/digests/pubmed-2026-05-18.md
+```
+
+Against the 22-paper tagged digest (18 ★, 4 skip):
+
+| Gate | Result |
+|---|---|
+| Retention | 21/22 = 95.5% — the one drop is a paper tagged `skip`, so correct |
+| Section agreement | 13/18 = 72.2% |
+| ★ inside top 25 | 18/18 |
+| AUC, ★ over skip | 0.792 across 72 pairs |
+| Mean score | ★ 1.025 vs skip 0.710 |
+
+The first run failed at 72.7% retention and caught three false positives in the suppression
+rules, each of which was dropping papers the reader had starred. Rank parity against the
+archive's *order* is not measured, because the archive is grouped by section rather than
+sorted by score; position there encodes topic, not preference.
+
 ## Status
 
-Phase 1 — single-user, file-backed. Supabase (auth + Postgres) lands in phase 2 for
-multi-tenancy. See the build plan for the full sequence.
+Phase 1 is built and verified end to end against live PubMed. State is file-backed;
+Supabase (auth + Postgres) is the phase-2 swap for multi-tenancy, and every function in
+`src/state.ts` maps 1:1 to a table so the change is local.
+
+**To put it online** the repo has to be reachable by GitHub Pages, which the free plan does
+not allow on a private repo. Three ways forward, in `tools/make-public.sh` and the build plan.
 
 ---
 
