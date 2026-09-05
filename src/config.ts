@@ -1,12 +1,23 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import type { WatcherConfig } from './types.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
+export function listTemplates(): string[] {
+  return readdirSync(here).filter((f) => f.endsWith('.template.json'))
+    .map((f) => f.replace('.template.json', '')).sort();
+}
+
 export function loadTemplate(slug = 'peds-cc'): WatcherConfig {
-  return JSON.parse(readFileSync(join(here, `${slug}.template.json`), 'utf8')) as WatcherConfig;
+  const path = join(here, `${slug}.template.json`);
+  if (!existsSync(path)) {
+    throw new Error(
+      `Unknown template "${slug}". Available: ${listTemplates().join(', ')}. ` +
+      `The signup page must not offer a template that has no backing file.`);
+  }
+  return JSON.parse(readFileSync(path, 'utf8')) as WatcherConfig;
 }
 
 /** Shallow-merge user overrides over a template. Arrays replace; objects merge one level. */

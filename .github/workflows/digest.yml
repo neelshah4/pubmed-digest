@@ -1,45 +1,86 @@
-name: digest
+name: Digest
 
-on:
+# Builds and (outside a dry run) sends the weekly digest.
+#
+# Schedule: Monday 11:23 UTC — off the top of the hour for the same reason as
+# ingest.yml: GitHub's docs warn the schedule event "can be delayed during
+# periods of high loads of GitHub Actions workflow runs" and queued jobs can
+# be dropped outright at peak times (start of every hour).
+# Source: https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows
+
+"on":
   schedule:
-    - cron: '23 11 * * 1'          # Mondays 11:23 UTC, off the hour
+    - cron: '23 11 * * 1'
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Render only, do not send'
-        type: boolean
+        description: 'Render the digest without sending it'
         required: false
+        type: boolean
         default: true
 
-concurrency:
-  group: digest
-  cancel-in-progress: false
-
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   digest:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
         with:
           node-version: '24'
 
-      - name: Build and send digests
+      # No package-lock.json exists yet (zero runtime dependencies today), so
+      # `npm ci` would hard-fail with no lockfile to install from. `npm install`
+      # works either way and keeps this step from breaking the day a real
+      # dependency (e.g. a Resend client) gets added.
+      - name: Install dependencies
+        run: npm install
+
+      # `inputs.dry_run` is only populated on workflow_dispatch; GitHub docs
+      # confirm dereferencing an input that doesn't apply to the current
+      # trigger "evaluate[s] to an empty string" rather than erroring, so on
+      # the Monday schedule trigger this falls through to 'false' — a real
+      # send, which is the intended weekly behavior.
+      # Source: https://docs.github.com/en/actions/learn-github-actions/contexts
+      #
+      # Contract with `npm run digest` (script not yet implemented): it must
+      # read DRY_RUN from the environment and, when it is the string "true",
+      # render the digest HTML into out/ WITHOUT calling the Resend API.
+      - name: Run digest
         env:
-          # Scheduled runs send. Manual runs default to dry.
-          DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || (github.event.inputs.dry_run || 'true') }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
         run: npm run digest
 
-      # A dry run is inspectable without anyone receiving mail.
-      - name: Upload rendered digests
-        if: always()
-        uses: actions/upload-artifact@v4
+      # Uploaded unconditionally after a successful run (dry or not) so a dry
+      # run is inspectable without sending mail, per spec. If `npm run digest`
+      # fails, the job stops here by default (no continue-on-error anywhere in
+      # this workflow) and this step is skipped — that's the required
+      # fail-loud behavior, not a bug.
+
+      # The dedup ledger is the whole point of "one merged digest": without it a
+      # paper reappears every week. GitHub runners are ephemeral, so state written
+      # during the run is lost unless it is committed back.
+      # Scoped to seen.json ONLY — users.json, feedback.json and profiles.json hold
+      # subscriber PII and must never enter git history.
+      - name: Persist dedup ledger
+        if: ${{ (inputs.dry_run || 'false') == 'false' }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f data/seen.json 2>/dev/null || true
+          git diff --staged --quiet || git commit -m "digest: dedup ledger $(date -u +%F)"
+          git push
+
+      - name: Upload rendered digest
+        uses: actions/upload-artifact@v7
         with:
-          name: rendered-digests
+          name: rendered-digest
           path: out/
           retention-days: 14
