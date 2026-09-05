@@ -65,9 +65,10 @@ jobs:
       #
       # src/cli-subscribe.ts (which calls src/signup-parse.ts — the only
       # module that parses the body) does all of: parse, validate, write the
-      # subscriber into data/users.json (gitignored — see that file's own
-      # header comment for the privacy rationale and its phase-1 tradeoffs),
-      # and prepare the outcome comment as a FILE (COMMENT_FILE) so the
+      # subscriber via src/store.ts (Supabase if SUPABASE_URL is set, else
+      # the gitignored data/users.json — see cli-subscribe.ts's own header
+      # comment for the privacy rationale and phase-1 tradeoffs), and
+      # prepare the outcome comment as a FILE (COMMENT_FILE) so the
       # `gh issue comment` step below never has to put user-supplied text
       # into a shell string either.
       - name: Parse, validate, and record the subscription

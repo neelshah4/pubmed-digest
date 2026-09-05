@@ -463,7 +463,7 @@
             <label for="template-adult-cc">Adult Critical Care</label>
           </div>
           <div class="choice-row">
-            <input type="checkbox" id="template-neuro-cc" name="templates" value="neuro-cc">
+            <input type="checkbox" id="template-neuro-cc" name="templates" value="neurocrit">
             <label for="template-neuro-cc">Neurocritical Care</label>
           </div>
         </div>
@@ -486,7 +486,7 @@
                   <label for="tier-1">Tier 1 only</label>
                 </div>
                 <div class="choice-row">
-                  <input type="radio" id="tier-1-2" name="journalTier" value="tier1-2" checked>
+                  <input type="radio" id="tier-1-2" name="journalTier" value="tier12" checked>
                   <label for="tier-1-2">Tiers 1–2</label>
                 </div>
                 <div class="choice-row">
@@ -547,7 +547,7 @@
   </form>
 
   <div class="panel success-panel" id="success-panel" hidden>
-    <h2>Check your inbox</h2>
+    <h2 id="success-heading">Check your inbox</h2>
     <p id="success-message">We've sent a confirmation link to your email address. Click it to activate your digest — subscriptions aren't active until confirmed.</p>
   </div>
 
@@ -560,9 +560,24 @@
 (function () {
   "use strict";
 
-  // Configure this before deploying. The page POSTs the subscription payload
-  // here as JSON, to `${API_BASE}/subscribe`.
+  // Two ways this form can actually submit a signup. Set SIGNUP_MODE before
+  // deploying.
+  //   'github' (default) — needs no backend at all. Builds a prefilled
+  //     GitHub Issue Form URL (.github/ISSUE_TEMPLATE/subscribe.yml) and
+  //     opens it; the visitor reviews and clicks "Submit new issue" on
+  //     GitHub itself, and .github/workflows/subscribe.yml takes it from
+  //     there (src/signup-parse.ts parses it, the subscriber is recorded,
+  //     the issue is commented on then closed and locked).
+  //   'api' — POSTs JSON to `${API_BASE}/subscribe` (the original behavior;
+  //     requires a live backend at API_BASE).
+  const SIGNUP_MODE = "github";
   const API_BASE = "https://api.example.com";
+
+  // Must match .github/ISSUE_TEMPLATE/subscribe.yml exactly: GITHUB_REPO is
+  // this repo, GITHUB_ISSUE_TEMPLATE is that file's name, and every key in
+  // buildGithubIssueUrl() below is one of that template's field `id`s.
+  const GITHUB_REPO = "neelshah4/pubmed-digest";
+  const GITHUB_ISSUE_TEMPLATE = "subscribe.yml";
 
   const ORCID_RE = /^\d{4}-\d{4}-\d{4}-\d{3}[0-9X]$/;
 
@@ -570,6 +585,7 @@
   const statusRegion = document.getElementById("status-region");
   const submitBtn = document.getElementById("submit-btn");
   const successPanel = document.getElementById("success-panel");
+  const successHeading = document.getElementById("success-heading");
   const successMessage = document.getElementById("success-message");
   const orcidRows = document.getElementById("orcid-rows");
   const addOrcidBtn = document.getElementById("add-orcid-btn");
@@ -743,7 +759,7 @@
       return el.value;
     });
     const journalTierEl = form.querySelector('input[name="journalTier"]:checked');
-    const journalTier = journalTierEl ? journalTierEl.value : "tier1-2";
+    const journalTier = journalTierEl ? journalTierEl.value : "tier12";
     const pubTypes = Array.from(form.querySelectorAll('input[name="pubTypes"]:checked')).map(function (el) {
       return el.value;
     });
@@ -768,17 +784,77 @@
     };
   }
 
-  form.addEventListener("submit", function (evt) {
-    evt.preventDefault();
+  function showSuccess(heading, message) {
+    form.hidden = true;
     clearBanner();
+    successHeading.textContent = heading;
+    successMessage.textContent = message;
+    successPanel.hidden = false;
+    successPanel.setAttribute("tabindex", "-1");
+    successPanel.focus();
+  }
 
-    if (!validateForm()) {
-      showBanner("error", "Please fix the highlighted fields before submitting.");
+  // Turns collectPayload()'s output into a prefilled GitHub Issue Form URL.
+  // Every key set here must be a field `id` in .github/ISSUE_TEMPLATE/subscribe.yml.
+  //
+  // Reliability, checked against GitHub's own docs and community reports
+  // (2026-09-05): a plain `input`/`textarea` field's `id` is documented as
+  // "the canonical identifier for the field in URL query parameter
+  // prefills" (docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema#keys)
+  // and this is confirmed working in practice. `dropdown` and `checkboxes`
+  // fields are NOT documented for query-param prefill, and GitHub's own
+  // community discussion (github.com/orgs/community/discussions/15477)
+  // reports dropdown prefill "currently doesn't" work and checkbox prefill
+  // as unreliable/unsupported. cadence, templates, journal-tier and
+  // pub-types are exactly those field types here, so this still sets them
+  // (a comma-joined list of the matching option text, the same convention
+  // GitHub's own documented `labels` query parameter uses) as a harmless
+  // best-effort attempt, but does not rely on it — see the "double-check"
+  // wording in submitViaGithub()'s success message below. email,
+  // extra-keywords, and orcid-list (input/textarea fields) are the ones
+  // actually guaranteed to carry over.
+  function buildGithubIssueUrl(payload) {
+    const params = new URLSearchParams();
+    params.set("template", GITHUB_ISSUE_TEMPLATE);
+    params.set("labels", "subscription");
+    params.set("email", payload.email);
+    params.set("cadence", payload.cadence);
+    if (payload.templates.length) params.set("templates", payload.templates.join(","));
+    params.set("journal-tier", payload.advanced.journalTier);
+    if (payload.advanced.publicationTypes.length) {
+      params.set("pub-types", payload.advanced.publicationTypes.join(","));
+    }
+    if (payload.advanced.extraKeywords.length) {
+      params.set("extra-keywords", payload.advanced.extraKeywords.join(", "));
+    }
+    if (payload.orcidWatchlist.length) {
+      params.set("orcid-list", payload.orcidWatchlist.join("\n"));
+    }
+    return "https://github.com/" + GITHUB_REPO + "/issues/new?" + params.toString();
+  }
+
+  function submitViaGithub(payload) {
+    const url = buildGithubIssueUrl(payload);
+    // window.open (not location.href) so the signup page stays open behind
+    // the new tab. Called synchronously from the submit handler, with no
+    // await/then in between, so browsers still treat it as a user-gesture-
+    // triggered open and don't block it as a popup; the `|| ` fallback below
+    // only matters for a browser that blocks it anyway.
+    const opened = window.open(url, "_blank", "noopener");
+    if (!opened) {
+      location.href = url;
       return;
     }
+    showSuccess(
+      "Almost there — finish on GitHub",
+      "A prefilled subscription request just opened in a new tab for " + payload.email +
+        ". Double-check the selections carried over correctly, then click “Submit new " +
+        "issue.” Your subscription starts once that issue is processed (it will be closed " +
+        "and locked automatically either way, so your email address doesn't stay visible there)."
+    );
+  }
 
-    const payload = collectPayload();
-
+  function submitViaApi(payload) {
     submitBtn.disabled = true;
     submitBtn.setAttribute("aria-busy", "true");
     const originalLabel = submitBtn.textContent;
@@ -791,13 +867,10 @@
     })
       .then(function (res) {
         if (res.ok) {
-          form.hidden = true;
-          clearBanner();
-          successMessage.textContent =
-            "We've sent a confirmation link to " + payload.email + ". Click it to activate your digest — subscriptions aren't active until confirmed.";
-          successPanel.hidden = false;
-          successPanel.setAttribute("tabindex", "-1");
-          successPanel.focus();
+          showSuccess(
+            "Check your inbox",
+            "We've sent a confirmation link to " + payload.email + ". Click it to activate your digest — subscriptions aren't active until confirmed."
+          );
           return null;
         }
         return res
@@ -824,6 +897,24 @@
         submitBtn.removeAttribute("aria-busy");
         submitBtn.textContent = originalLabel;
       });
+  }
+
+  form.addEventListener("submit", function (evt) {
+    evt.preventDefault();
+    clearBanner();
+
+    if (!validateForm()) {
+      showBanner("error", "Please fix the highlighted fields before submitting.");
+      return;
+    }
+
+    const payload = collectPayload();
+
+    if (SIGNUP_MODE === "github") {
+      submitViaGithub(payload);
+    } else {
+      submitViaApi(payload);
+    }
   });
 })();
 </script>

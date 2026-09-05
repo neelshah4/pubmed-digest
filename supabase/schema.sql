@@ -411,3 +411,40 @@ revoke all on function confirm_subscription(uuid, uuid) from public;
 grant execute on function record_feedback(uuid, uuid, text, text) to anon, authenticated;
 grant execute on function unsubscribe(uuid, uuid) to anon, authenticated;
 grant execute on function confirm_subscription(uuid, uuid) to anon, authenticated;
+
+-- ----------------------------------------------------------------------------
+-- Table-level GRANTs — required independent of every RLS policy above, and independent of the
+-- RPC functions above.
+--
+-- Verified this session via Supabase's own changelog: starting 2026-05-30, a new project can opt
+-- out of automatically granting anon/authenticated/service_role privileges on newly created
+-- tables (the "Automatically expose new tables" checkbox at project creation); starting
+-- 2026-10-30, EVERY project — new and already-existing — stops auto-granting on newly CREATED
+-- tables regardless of that checkbox (tables that already existed before the cutover keep the
+-- grants they already have). Since this file creates brand-new tables and may be run on a project
+-- made at any point relative to those two dates, none of the RLS policies above are reachable
+-- without the GRANTs below: RLS decides which ROWS a request can touch, but a role needs the
+-- underlying table privilege before RLS is even evaluated. Left out, `service_role` itself could
+-- be refused with a bare 42501 on a project where auto-grant is off — which reads as "the schema
+-- is broken" when the real cause is a missing privilege. These statements follow the manual fix
+-- Supabase's own changelog gives for this change.
+-- ----------------------------------------------------------------------------
+
+-- service_role: BYPASSRLS skips row-filtering, it does not imply a table GRANT — the two are
+-- independent privilege checks. This is the role src/store-supabase.ts runs as; without this,
+-- the ingest/digest GitHub Actions jobs would fail outright on an affected project.
+grant select, insert, update, delete on
+  users, templates, user_templates, user_config, author_watches, papers, user_seen, feedback, digests
+  to service_role;
+
+-- anon / authenticated: scoped to exactly what each table's RLS policies above already allow a
+-- signed-in (or, for the two public tables, unauthenticated) caller to do. Granting more than the
+-- RLS policies permit would be inert — RLS still filters rows either way — but is avoided anyway
+-- on least-privilege grounds. Note this section is unrelated to the emailed action links: those
+-- SECURITY DEFINER functions run with their OWNER's privileges, not the caller's, so `anon` needs
+-- no table grant on users/feedback to use them — only the `grant execute` above matters there.
+grant select on papers, templates to anon, authenticated;
+grant select, update on users to authenticated;
+grant select, insert, update, delete on user_templates, user_config, author_watches to authenticated;
+grant select, insert on user_seen, feedback to authenticated;
+grant select on digests to authenticated;

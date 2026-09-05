@@ -39,4 +39,8 @@ echo
 echo "Next, and only if the above says Clean:"
 echo "  git push --force origin main"
 echo "  gh repo edit neelshah4/pubmed-digest --visibility public --accept-visibility-change-consequences"
-echo "  gh api -X POST repos/neelshah4/pubmed-digest/pages -f 'source[branch]=main' -f 'source[path]=/'"
+echo "  gh api -X POST repos/neelshah4/pubmed-digest/pages -f build_type=workflow"
+echo
+echo "Pages is deployed by .github/workflows/pages.yml, which publishes web/ via"
+echo "actions/deploy-pages. Do NOT configure a branch-based source: it would serve"
+echo "the repository root, where there is no index.html, and fight the workflow."

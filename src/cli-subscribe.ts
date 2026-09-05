@@ -17,24 +17,28 @@
  * — "environment files" are a general write-a-file mechanism, not bash-only),
  * plus a one-line JSON summary on stdout for the workflow log.
  *
- * TODO(sibling agent building src/store.ts): this imports loadUsers/saveUsers
- * from ./state.ts because src/store.ts did not exist yet when this was
- * written (2026-09-05). Once store.ts exists with a Supabase-aware write
- * path, point writeSubscriber() below at it instead.
+ * Store: imports loadUsers/saveUsers from ./store.ts (the backend selector —
+ * Supabase when SUPABASE_URL is set, else the local file store), per the
+ * project convention every other caller (cli-ingest.ts, cli-digest.ts)
+ * already follows. Both are Promise-returning even on the file backend, so
+ * every call below is awaited uniformly regardless of which backend is live.
  *
- * PRIVACY: writes to data/users.json, which is gitignored (`data/*.json` in
- * .gitignore) — subscriber emails are never committed. That also means,
- * absent Supabase, a subscription recorded here does not survive past this
- * Actions run: the next run starts from a fresh checkout of the committed
- * repo, which does not include data/users.json. That is the accepted phase-1
- * tradeoff described in the README's Status section, not an oversight.
+ * PRIVACY: on the file backend this writes to data/users.json, which is
+ * gitignored (`data/*.json` in .gitignore) — subscriber emails are never
+ * committed. That also means, absent SUPABASE_URL, a subscription recorded
+ * here does not survive past this Actions run: the next run starts from a
+ * fresh checkout of the committed repo, which does not include
+ * data/users.json. That is the accepted phase-1 tradeoff described in the
+ * README's Status section, not an oversight — set SUPABASE_URL (and
+ * SUPABASE_SERVICE_KEY) as repo secrets once Supabase is provisioned and
+ * this script durably persists subscribers with no code change.
  */
 import { randomUUID } from 'node:crypto';
 import { appendFileSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseIssueBody } from './signup-parse.ts';
-import { loadUsers, saveUsers } from './state.ts';
+import { loadUsers, saveUsers } from './store.ts';
 import type { SignupPrefs, User } from './types.ts';
 
 const issueBody = process.env.ISSUE_BODY ?? '';
@@ -81,7 +85,7 @@ if (!result.ok) {
 }
 
 const { prefs } = result;
-const users = loadUsers();
+const users = await loadUsers();
 const existing = users.find((u) => u.email.toLowerCase() === prefs.email.toLowerCase());
 
 let user: User;
@@ -110,7 +114,17 @@ if (existing) {
   };
 }
 
-saveUsers(isUpdate ? users.map((u) => (u.id === user.id ? user : u)) : [...users, user]);
+await saveUsers(isUpdate ? users.map((u) => (u.id === user.id ? user : u)) : [...users, user]);
+
+// store.ts silently picks Supabase over the file backend whenever
+// SUPABASE_URL is set (see src/store.ts) — the comment must say which one
+// actually just ran, not always describe the phase-1 file backend.
+const persistenceNote = process.env.SUPABASE_URL
+  ? 'This was written to the Supabase-backed subscriber store, so it persists across future runs.'
+  : 'This repository is still Phase 1 (file-backed — see the README\'s Status section): ' +
+    'this request was written to the repo\'s local subscriber store, which is gitignored and ' +
+    'does not persist across scheduled Actions runs until the Supabase backend (phase 2) is ' +
+    'wired in. If a digest never arrives, that is why.';
 
 const comment = [
   isUpdate
@@ -121,10 +135,7 @@ const comment = [
   '|---|---|',
   describePrefs(prefs),
   '',
-  'This repository is still Phase 1 (file-backed — see the README\'s Status section): ' +
-    'this request was written to the repo\'s local subscriber store, which is gitignored and ' +
-    'does not persist across scheduled Actions runs until the Supabase backend (phase 2) is ' +
-    'wired in. If a digest never arrives, that is why.',
+  persistenceNote,
   '',
   FOOTER,
 ].join('\n');

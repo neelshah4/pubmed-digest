@@ -5,12 +5,12 @@ import { configFor, DEFAULT_PREFS } from './prefs.ts';
 import { feedbackBaseUrl, unsubscribeUrl, PUBLIC_BASE } from './urls.ts';
 import { buildDigest } from './score/score.ts';
 import { renderDigestHtml, renderDigestText, renderSubject } from './render/email.ts';
-import { papersSince, loadUsers, markSeen, hasSeen, loadProfile } from './state.ts';
+import { papersSince, loadUsers, markSeen, hasSeen, loadProfile } from './store.ts';
 import { sendDigest } from './mail.ts';
 
 const DRY = process.env.DRY_RUN !== 'false';
 const days = Number(process.env.DAYS ?? 7);
-const users = loadUsers();
+const users = await loadUsers();
 const authorHits = new Map<string, { orcid: string; label?: string }>(
   existsSync('data/author-hits.json')
     ? Object.entries(JSON.parse(readFileSync('data/author-hits.json', 'utf8')))
@@ -33,11 +33,11 @@ for (const u of users) {
   const prefs = { ...DEFAULT_PREFS, ...(u.prefs ?? {}), email: u.email,
                   templates: u.prefs?.templates ?? u.templates ?? ['peds-cc'] };
   let cfg = configFor(prefs);
-  const lp = loadProfile(u.id);
+  const lp = await loadProfile(u.id);
   if (lp) cfg = { ...cfg, preference_profile: { ...cfg.preference_profile, learned_profile: lp } };
 
-  const seen = hasSeen(u.id);
-  const pool = papersSince(days).filter((p) => !seen.has(p.pmid));
+  const seen = await hasSeen(u.id);
+  const pool = (await papersSince(days)).filter((p) => !seen.has(p.pmid));
   const d = buildDigest(pool, cfg, u.id, days, { prefs, authorHits, email: u.email });
 
   const shown = [...d.authorPapers, ...d.practiceChanging, ...d.sections.flatMap((s) => s.papers)];
@@ -64,7 +64,7 @@ for (const u of users) {
       process.exit(1);
     }
     if (!r.ok) { console.error(`[digest] send failed for ${u.email} (${r.status}): ${r.error}`); process.exit(1); }
-    markSeen(u.id, shown.map((s) => s.paper.pmid));
+    await markSeen(u.id, shown.map((s) => s.paper.pmid));
   }
 }
 console.log(DRY ? '[digest] DRY RUN — nothing sent' : '[digest] sent');

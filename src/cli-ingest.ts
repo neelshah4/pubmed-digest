@@ -5,7 +5,7 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { loadTemplate, allJournals } from './config.ts';
 import { harvest, fetchPapers, searchAuthors } from './sources/eutils.ts';
-import { upsertPapers, loadUsers } from './state.ts';
+import { upsertPapers, loadUsers } from './store.ts';
 
 const days = Number(process.env.DAYS ?? process.argv[2] ?? 7);
 const common = {
@@ -17,7 +17,7 @@ const common = {
 };
 
 // --- 1. journal union across every template any subscriber uses --------------
-const users = loadUsers();
+const users = await loadUsers();
 const slugs = [...new Set(users.flatMap((u) => u.templates ?? []).concat('peds-cc'))];
 const journals = [...new Set(slugs.flatMap((s) => {
   try { return allJournals(loadTemplate(s)); } catch { return []; }
@@ -57,7 +57,7 @@ if (watched.length) {
               (failed.length ? `, ${failed.length} failed (${failed.map((f) => f.orcid).join(', ')})` : ''));
 }
 
-const { added, total } = upsertPapers([...papers, ...authorPapers]);
+const { added, total } = await upsertPapers([...papers, ...authorPapers]);
 mkdirSync('data', { recursive: true });
 writeFileSync('data/author-hits.json', JSON.stringify(authorHits, null, 2));
 console.log(`[ingest] fetched=${papers.length + authorPapers.length} new=${added} cached=${total} in ${((Date.now() - t0) / 1000).toFixed(1)}s`);
