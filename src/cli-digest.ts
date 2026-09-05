@@ -1,0 +1,56 @@
+/** Weekly digest: score cached papers per user -> render -> (send | dry-run). */
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { loadTemplate, withOverrides } from './config.ts';
+import { buildDigest } from './score/score.ts';
+import { renderDigestHtml, renderDigestText, renderSubject } from './render/email.ts';
+import { papersSince, loadUsers, markSeen, hasSeen, loadProfile } from './state.ts';
+
+const DRY = process.env.DRY_RUN !== 'false';
+const days = Number(process.env.DAYS ?? 7);
+const users = loadUsers();
+if (users.length === 0) { console.error('[digest] no users configured'); process.exit(1); }
+
+mkdirSync('out', { recursive: true });
+
+for (const u of users) {
+  let cfg = withOverrides(loadTemplate(u.templates[0] ?? 'peds-cc'), u.overrides);
+  const lp = loadProfile(u.id);
+  if (lp) cfg = { ...cfg, preference_profile: { ...cfg.preference_profile, learned_profile: lp } };
+
+  const seen = hasSeen(u.id);
+  const pool = papersSince(days).filter((p) => !seen.has(p.pmid));
+  const d = buildDigest(pool, cfg, u.id, days);
+
+  const shown = [...d.practiceChanging, ...d.sections.flatMap((s) => s.papers)];
+  const html = renderDigestHtml(d, {
+    unsubscribeUrl: `https://example.invalid/unsubscribe?u=${u.id}`,
+    feedbackBaseUrl: 'https://example.invalid/feedback',
+    userEmail: u.email,
+  });
+  writeFileSync(`out/digest-${u.id}.html`, html);
+  writeFileSync(`out/digest-${u.id}.txt`, renderDigestText(d, {
+    unsubscribeUrl: `https://example.invalid/unsubscribe?u=${u.id}`,
+    feedbackBaseUrl: 'https://example.invalid/feedback', userEmail: u.email }));
+
+  console.log(`[digest] ${u.email}: pool=${pool.length} kept=${d.totalAfterFilter} shown=${shown.length} -> out/digest-${u.id}.html`);
+  console.log(`         subject: ${renderSubject(d)}`);
+
+  if (!DRY) {
+    const key = process.env.RESEND_API_KEY;
+    if (!key) { console.error('[digest] FATAL: RESEND_API_KEY unset but DRY_RUN=false'); process.exit(1); }
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        from: process.env.MAIL_FROM, to: u.email, subject: renderSubject(d), html,
+        headers: {
+          'List-Unsubscribe': `<https://example.invalid/unsubscribe?u=${u.id}>`,
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+        },
+      }),
+    });
+    if (!r.ok) { console.error(`[digest] send failed ${r.status}: ${await r.text()}`); process.exit(1); }
+    markSeen(u.id, shown.map((s) => s.paper.pmid));
+  }
+}
+console.log(DRY ? '[digest] DRY RUN — nothing sent' : '[digest] sent');

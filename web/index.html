@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Critical Care Literature Digest — Sign Up</title>
+<meta name="description" content="Subscribe to a weekly or monthly digest of new critical care literature, filtered by specialty, journal tier, and study type.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f5f6f8;
+    --surface: #ffffff;
+    --surface-inset: #f0f1f4;
+    --text: #16191f;
+    --text-muted: #565d6b;
+    --border: #d4d8de;
+    --border-strong: #aab0ba;
+    --accent: #0b6e7f;
+    --accent-strong: #084f5c;
+    --accent-contrast: #ffffff;
+    --danger: #a32020;
+    --danger-bg: #fdecec;
+    --success: #146c37;
+    --success-bg: #eaf6ee;
+    --focus-ring: #0b6e7f;
+    --shadow: 0 1px 2px rgba(20, 22, 26, 0.06), 0 4px 14px rgba(20, 22, 26, 0.06);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --bg: #14161a;
+      --surface: #1c1f25;
+      --surface-inset: #23262d;
+      --text: #eceef1;
+      --text-muted: #a3aab5;
+      --border: #343943;
+      --border-strong: #4a5058;
+      --accent: #4fc3d4;
+      --accent-strong: #7bd6e3;
+      --accent-contrast: #08222a;
+      --danger: #ff8a80;
+      --danger-bg: #3a1f1f;
+      --success: #7be0a0;
+      --success-bg: #1c3324;
+      --focus-ring: #4fc3d4;
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 18px rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html { -webkit-text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    font-size: 16px;
+  }
+
+  a { color: var(--accent-strong); }
+
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 4rem;
+  }
+
+  header.page-head {
+    margin-bottom: 2rem;
+  }
+
+  header.page-head h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem;
+    letter-spacing: -0.01em;
+  }
+
+  header.page-head p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.975rem;
+    max-width: 46em;
+  }
+
+  form, .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 1.75rem;
+  }
+
+  section.form-section {
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  section.form-section:last-of-type {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+  }
+
+  section.form-section > h2 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+  }
+
+  section.form-section > p.hint {
+    margin: 0 0 0.9rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+
+  fieldset {
+    border: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  legend {
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 0;
+    margin-bottom: 0.25rem;
+  }
+
+  legend + p.hint {
+    margin-top: 0;
+    margin-bottom: 0.9rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+
+  label {
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  .field {
+    margin-bottom: 1rem;
+  }
+
+  .field:last-child { margin-bottom: 0; }
+
+  .field > label {
+    display: block;
+    margin-bottom: 0.4rem;
+  }
+
+  input[type="email"],
+  input[type="text"] {
+    width: 100%;
+    font: inherit;
+    font-size: 1rem;
+    padding: 0.6rem 0.75rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+  }
+
+  input[type="email"]::placeholder,
+  input[type="text"]::placeholder {
+    color: var(--text-muted);
+    opacity: 0.85;
+  }
+
+  input:focus-visible,
+  button:focus-visible,
+  summary:focus-visible,
+  a:focus-visible {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* Fallback for browsers without :focus-visible support */
+  input:focus,
+  button:focus,
+  summary:focus {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .choice-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    padding: 0.4rem 0;
+  }
+
+  .choice-row input[type="radio"],
+  .choice-row input[type="checkbox"] {
+    width: 1.15rem;
+    height: 1.15rem;
+    margin-top: 0.15rem;
+    accent-color: var(--accent);
+    flex-shrink: 0;
+  }
+
+  .choice-row label {
+    font-weight: 400;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+
+  .choice-grid {
+    display: flex;
+    flex-direction: column;
+  }
+
+  details.advanced {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-inset);
+    padding: 0;
+    overflow: hidden;
+  }
+
+  details.advanced > summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 0.85rem 1rem;
+    font-weight: 600;
+    font-size: 0.92rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    user-select: none;
+  }
+
+  details.advanced > summary::-webkit-details-marker { display: none; }
+
+  details.advanced > summary::before {
+    content: "▸";
+    display: inline-block;
+    transition: transform 0.15s ease;
+    color: var(--accent-strong);
+  }
+
+  details.advanced[open] > summary::before {
+    transform: rotate(90deg);
+  }
+
+  .advanced-body {
+    padding: 0 1rem 1.1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .advanced-body > .adv-block {
+    padding-top: 1.1rem;
+  }
+
+  .advanced-body > .adv-block + .adv-block {
+    margin-top: 1.1rem;
+    border-top: 1px dashed var(--border);
+  }
+
+  .orcid-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    margin-bottom: 0.6rem;
+  }
+
+  .orcid-row .orcid-field {
+    flex: 1;
+  }
+
+  .orcid-row input[type="text"] {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+  }
+
+  .orcid-row input[aria-invalid="true"] {
+    border-color: var(--danger);
+  }
+
+  .icon-btn {
+    flex-shrink: 0;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text-muted);
+    border-radius: 8px;
+    width: 2.6rem;
+    height: 2.6rem;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .icon-btn:hover { color: var(--danger); border-color: var(--danger); }
+
+  .add-orcid {
+    margin-top: 0.25rem;
+    background: none;
+    border: 1px dashed var(--border-strong);
+    color: var(--accent-strong);
+    border-radius: 8px;
+    padding: 0.5rem 0.85rem;
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+
+  .add-orcid:hover { border-style: solid; }
+
+  .error-text {
+    color: var(--danger);
+    font-size: 0.82rem;
+    margin: 0.3rem 0 0;
+  }
+
+  .error-text:empty { display: none; }
+
+  .field-error input { border-color: var(--danger); }
+
+  button.submit {
+    width: 100%;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    border: none;
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    font: inherit;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-top: 0.5rem;
+  }
+
+  button.submit:hover { background: var(--accent-strong); }
+
+  button.submit:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+  }
+
+  .status-banner {
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    font-size: 0.9rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .status-banner.error {
+    background: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid var(--danger);
+  }
+
+  .status-banner.success {
+    background: var(--success-bg);
+    color: var(--success);
+    border: 1px solid var(--success);
+  }
+
+  .success-panel h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.15rem;
+  }
+
+  .success-panel p {
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  [hidden] { display: none !important; }
+
+  .req {
+    color: var(--danger);
+    font-weight: 600;
+  }
+
+  .js-required-notice {
+    background: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    margin-bottom: 1.25rem;
+    font-size: 0.9rem;
+  }
+
+  footer.page-foot {
+    margin-top: 2rem;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+  }
+
+  @media (max-width: 420px) {
+    .wrap { padding: 1.5rem 0.85rem 3rem; }
+    form, .panel { padding: 1.25rem; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="page-head">
+    <h1>Critical care literature digest</h1>
+    <p>A weekly or monthly email of new critical care research, filtered to the journals, study types, and topics you choose. No tracking, no analytics — just the digest.</p>
+  </header>
+
+  <noscript>
+    <p class="js-required-notice">This form requires JavaScript to validate input and submit your subscription. Please enable JavaScript and reload the page.</p>
+  </noscript>
+
+  <div id="status-region" aria-live="polite"></div>
+
+  <form id="signup-form" novalidate>
+
+    <section class="form-section">
+      <h2>Email</h2>
+      <div class="field">
+        <label for="email">Email address <span class="req" aria-hidden="true">*</span></label>
+        <input type="email" id="email" name="email" autocomplete="email" required
+               aria-describedby="email-error" aria-required="true">
+        <p class="error-text" id="email-error" role="alert"></p>
+      </div>
+    </section>
+
+    <section class="form-section">
+      <fieldset>
+        <legend>Cadence <span class="req" aria-hidden="true">*</span></legend>
+        <p class="hint">How often you'd like the digest delivered.</p>
+        <div class="choice-grid" role="radiogroup" aria-describedby="cadence-error">
+          <div class="choice-row">
+            <input type="radio" id="cadence-weekly" name="cadence" value="weekly" checked>
+            <label for="cadence-weekly">Weekly</label>
+          </div>
+          <div class="choice-row">
+            <input type="radio" id="cadence-monthly" name="cadence" value="monthly">
+            <label for="cadence-monthly">Monthly</label>
+          </div>
+        </div>
+        <p class="error-text" id="cadence-error" role="alert"></p>
+      </fieldset>
+    </section>
+
+    <section class="form-section">
+      <fieldset>
+        <legend>Specialty templates <span class="req" aria-hidden="true">*</span></legend>
+        <p class="hint">Pick at least one. Each template controls the journal list and topic filters applied to your digest.</p>
+        <div class="choice-grid" aria-describedby="templates-error">
+          <div class="choice-row">
+            <input type="checkbox" id="template-peds-cc" name="templates" value="peds-cc">
+            <label for="template-peds-cc">Peds Critical Care</label>
+          </div>
+          <div class="choice-row">
+            <input type="checkbox" id="template-adult-cc" name="templates" value="adult-cc">
+            <label for="template-adult-cc">Adult Critical Care</label>
+          </div>
+          <div class="choice-row">
+            <input type="checkbox" id="template-neuro-cc" name="templates" value="neuro-cc">
+            <label for="template-neuro-cc">Neurocritical Care</label>
+          </div>
+        </div>
+        <p class="error-text" id="templates-error" role="alert"></p>
+      </fieldset>
+    </section>
+
+    <section class="form-section">
+      <details class="advanced" id="advanced-details">
+        <summary id="advanced-summary" aria-controls="advanced-body">Advanced filters</summary>
+        <div class="advanced-body" id="advanced-body">
+
+          <div class="adv-block">
+            <fieldset>
+              <legend>Journal tier</legend>
+              <p class="hint">Narrower tiers mean fewer, higher-signal papers.</p>
+              <div class="choice-grid">
+                <div class="choice-row">
+                  <input type="radio" id="tier-1" name="journalTier" value="tier1">
+                  <label for="tier-1">Tier 1 only</label>
+                </div>
+                <div class="choice-row">
+                  <input type="radio" id="tier-1-2" name="journalTier" value="tier1-2" checked>
+                  <label for="tier-1-2">Tiers 1–2</label>
+                </div>
+                <div class="choice-row">
+                  <input type="radio" id="tier-all" name="journalTier" value="all">
+                  <label for="tier-all">All tiers</label>
+                </div>
+              </div>
+            </fieldset>
+          </div>
+
+          <div class="adv-block">
+            <fieldset>
+              <legend>Publication types</legend>
+              <p class="hint">Leave all unchecked to include every study type.</p>
+              <div class="choice-grid">
+                <div class="choice-row">
+                  <input type="checkbox" id="pubtype-rct" name="pubTypes" value="rct">
+                  <label for="pubtype-rct">RCT</label>
+                </div>
+                <div class="choice-row">
+                  <input type="checkbox" id="pubtype-meta" name="pubTypes" value="meta-analysis-systematic-review">
+                  <label for="pubtype-meta">Meta-Analysis / Systematic Review</label>
+                </div>
+                <div class="choice-row">
+                  <input type="checkbox" id="pubtype-obs" name="pubTypes" value="observational">
+                  <label for="pubtype-obs">Observational</label>
+                </div>
+                <div class="choice-row">
+                  <input type="checkbox" id="pubtype-guideline" name="pubTypes" value="practice-guideline">
+                  <label for="pubtype-guideline">Practice Guideline</label>
+                </div>
+              </div>
+            </fieldset>
+          </div>
+
+          <div class="adv-block">
+            <div class="field">
+              <label for="extra-keywords">Extra keywords</label>
+              <input type="text" id="extra-keywords" name="extraKeywords"
+                     placeholder="e.g. driving pressure, EIT, VA ECMO"
+                     aria-describedby="extra-keywords-hint">
+              <p class="hint" id="extra-keywords-hint" style="margin-top:0.4rem;">Comma-separated. Matched against title and abstract in addition to your templates.</p>
+            </div>
+          </div>
+
+        </div>
+      </details>
+    </section>
+
+    <section class="form-section">
+      <h2>Author watch (ORCID)</h2>
+      <p class="hint">Track specific authors by ORCID iD. Plain author names are deliberately not supported — PubMed name matching is too unreliable to use for a watch list.</p>
+      <div id="orcid-rows"></div>
+      <button type="button" class="add-orcid" id="add-orcid-btn">+ Add ORCID iD</button>
+    </section>
+
+    <button type="submit" class="submit" id="submit-btn">Subscribe</button>
+  </form>
+
+  <div class="panel success-panel" id="success-panel" hidden>
+    <h2>Check your inbox</h2>
+    <p id="success-message">We've sent a confirmation link to your email address. Click it to activate your digest — subscriptions aren't active until confirmed.</p>
+  </div>
+
+  <footer class="page-foot">
+    <p>No tracking. No analytics. No cookies. Unsubscribe link included in every digest.</p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // Configure this before deploying. The page POSTs the subscription payload
+  // here as JSON, to `${API_BASE}/subscribe`.
+  const API_BASE = "https://api.example.com";
+
+  const ORCID_RE = /^\d{4}-\d{4}-\d{4}-\d{3}[0-9X]$/;
+
+  const form = document.getElementById("signup-form");
+  const statusRegion = document.getElementById("status-region");
+  const submitBtn = document.getElementById("submit-btn");
+  const successPanel = document.getElementById("success-panel");
+  const successMessage = document.getElementById("success-message");
+  const orcidRows = document.getElementById("orcid-rows");
+  const addOrcidBtn = document.getElementById("add-orcid-btn");
+
+  let orcidRowCount = 0;
+
+  function addOrcidRow(initialValue) {
+    orcidRowCount += 1;
+    const idx = orcidRowCount;
+    const row = document.createElement("div");
+    row.className = "orcid-row";
+    row.dataset.rowIndex = String(idx);
+
+    const fieldWrap = document.createElement("div");
+    fieldWrap.className = "orcid-field";
+
+    const label = document.createElement("label");
+    label.setAttribute("for", "orcid-" + idx);
+    label.className = "visually-hidden-label";
+    label.style.position = "absolute";
+    label.style.width = "1px";
+    label.style.height = "1px";
+    label.style.overflow = "hidden";
+    label.style.clip = "rect(0 0 0 0)";
+    label.textContent = "ORCID iD #" + idx;
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.id = "orcid-" + idx;
+    input.name = "orcid";
+    input.placeholder = "0000-0002-1825-0097";
+    input.setAttribute("inputmode", "text");
+    input.setAttribute("autocomplete", "off");
+    input.setAttribute("aria-describedby", "orcid-" + idx + "-error");
+
+    const error = document.createElement("p");
+    error.className = "error-text";
+    error.id = "orcid-" + idx + "-error";
+    error.setAttribute("role", "alert");
+
+    input.addEventListener("input", function () {
+      validateOrcidRow(row, false);
+    });
+    input.addEventListener("blur", function () {
+      if (input.value.trim()) {
+        input.value = input.value.trim().toUpperCase();
+      }
+      validateOrcidRow(row, true);
+    });
+
+    fieldWrap.appendChild(label);
+    fieldWrap.appendChild(input);
+    fieldWrap.appendChild(error);
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "icon-btn";
+    removeBtn.setAttribute("aria-label", "Remove ORCID iD #" + idx);
+    removeBtn.textContent = "✕";
+    removeBtn.addEventListener("click", function () {
+      row.remove();
+    });
+
+    row.appendChild(fieldWrap);
+    row.appendChild(removeBtn);
+    orcidRows.appendChild(row);
+
+    if (initialValue) {
+      input.value = initialValue;
+    }
+  }
+
+  function validateOrcidRow(row, showError) {
+    const input = row.querySelector("input");
+    const error = row.querySelector(".error-text");
+    const value = input.value.trim();
+
+    if (!value) {
+      input.removeAttribute("aria-invalid");
+      error.textContent = "";
+      return true;
+    }
+    if (ORCID_RE.test(value)) {
+      input.removeAttribute("aria-invalid");
+      error.textContent = "";
+      return true;
+    }
+    if (showError) {
+      input.setAttribute("aria-invalid", "true");
+      error.textContent = "Enter a valid ORCID iD in the form 0000-0000-0000-0000.";
+    }
+    return false;
+  }
+
+  addOrcidBtn.addEventListener("click", function () {
+    addOrcidRow();
+    const rows = orcidRows.querySelectorAll(".orcid-row input");
+    if (rows.length) rows[rows.length - 1].focus();
+  });
+
+  // Start with one empty row so the section isn't visually blank.
+  addOrcidRow();
+
+  function setFieldError(fieldEl, errorEl, message) {
+    errorEl.textContent = message || "";
+    if (message) {
+      fieldEl.classList.add("field-error");
+    } else {
+      fieldEl.classList.remove("field-error");
+    }
+  }
+
+  function showBanner(kind, message) {
+    statusRegion.innerHTML = "";
+    const banner = document.createElement("div");
+    banner.className = "status-banner " + kind;
+    banner.setAttribute("role", kind === "error" ? "alert" : "status");
+    banner.textContent = message;
+    statusRegion.appendChild(banner);
+  }
+
+  function clearBanner() {
+    statusRegion.innerHTML = "";
+  }
+
+  function validateForm() {
+    let firstInvalid = null;
+    let valid = true;
+
+    // Email
+    const emailInput = document.getElementById("email");
+    const emailField = emailInput.closest(".field");
+    const emailError = document.getElementById("email-error");
+    if (!emailInput.value.trim() || !emailInput.validity.valid) {
+      setFieldError(emailField, emailError, "Enter a valid email address.");
+      valid = false;
+      firstInvalid = firstInvalid || emailInput;
+    } else {
+      setFieldError(emailField, emailError, "");
+    }
+
+    // Templates: at least one
+    const templateBoxes = form.querySelectorAll('input[name="templates"]:checked');
+    const templatesError = document.getElementById("templates-error");
+    if (templateBoxes.length === 0) {
+      templatesError.textContent = "Choose at least one specialty template.";
+      valid = false;
+      firstInvalid = firstInvalid || form.querySelector('input[name="templates"]');
+    } else {
+      templatesError.textContent = "";
+    }
+
+    // ORCID rows: each non-empty row must be valid
+    const rows = orcidRows.querySelectorAll(".orcid-row");
+    rows.forEach(function (row) {
+      const ok = validateOrcidRow(row, true);
+      if (!ok && !firstInvalid) {
+        firstInvalid = row.querySelector("input");
+      }
+      if (!ok) valid = false;
+    });
+
+    if (firstInvalid) firstInvalid.focus();
+    return valid;
+  }
+
+  function collectPayload() {
+    const email = document.getElementById("email").value.trim();
+    const cadence = form.querySelector('input[name="cadence"]:checked').value;
+    const templates = Array.from(form.querySelectorAll('input[name="templates"]:checked')).map(function (el) {
+      return el.value;
+    });
+    const journalTierEl = form.querySelector('input[name="journalTier"]:checked');
+    const journalTier = journalTierEl ? journalTierEl.value : "tier1-2";
+    const pubTypes = Array.from(form.querySelectorAll('input[name="pubTypes"]:checked')).map(function (el) {
+      return el.value;
+    });
+    const extraKeywordsRaw = document.getElementById("extra-keywords").value.trim();
+    const extraKeywords = extraKeywordsRaw
+      ? extraKeywordsRaw.split(",").map(function (s) { return s.trim(); }).filter(Boolean)
+      : [];
+    const orcids = Array.from(orcidRows.querySelectorAll(".orcid-row input"))
+      .map(function (el) { return el.value.trim(); })
+      .filter(Boolean);
+
+    return {
+      email: email,
+      cadence: cadence,
+      templates: templates,
+      advanced: {
+        journalTier: journalTier,
+        publicationTypes: pubTypes,
+        extraKeywords: extraKeywords
+      },
+      orcidWatchlist: orcids
+    };
+  }
+
+  form.addEventListener("submit", function (evt) {
+    evt.preventDefault();
+    clearBanner();
+
+    if (!validateForm()) {
+      showBanner("error", "Please fix the highlighted fields before submitting.");
+      return;
+    }
+
+    const payload = collectPayload();
+
+    submitBtn.disabled = true;
+    submitBtn.setAttribute("aria-busy", "true");
+    const originalLabel = submitBtn.textContent;
+    submitBtn.textContent = "Submitting…";
+
+    fetch(API_BASE + "/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+      .then(function (res) {
+        if (res.ok) {
+          form.hidden = true;
+          clearBanner();
+          successMessage.textContent =
+            "We've sent a confirmation link to " + payload.email + ". Click it to activate your digest — subscriptions aren't active until confirmed.";
+          successPanel.hidden = false;
+          successPanel.setAttribute("tabindex", "-1");
+          successPanel.focus();
+          return null;
+        }
+        return res
+          .json()
+          .catch(function () { return null; })
+          .then(function (body) {
+            const msg = (body && (body.message || body.error)) || ("Something went wrong (HTTP " + res.status + ").");
+            throw new Error(msg);
+          });
+      })
+      .catch(function (err) {
+        const message = err && err.message
+          ? err.message
+          : "Could not reach the server. Check your connection and try again.";
+        showBanner("error", message);
+      })
+      .finally(function () {
+        submitBtn.disabled = false;
+        submitBtn.removeAttribute("aria-busy");
+        submitBtn.textContent = originalLabel;
+      });
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "pubmed-digest",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "ingest": "node --experimental-strip-types src/cli-ingest.ts",
+    "digest": "node --experimental-strip-types src/cli-digest.ts",
+    "test": "node --experimental-strip-types --test tests/*.test.ts"
+  }
+}

@@ -1,0 +1,8 @@
+node_modules/
+data/*.json
+!data/.gitkeep
+out/
+.env
+inspect.ts
+dbg.ts
+q.ts
