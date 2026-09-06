@@ -344,8 +344,8 @@ footer a{color:var(--slate); text-decoration:underline; text-underline-offset:2p
     <p>Data courtesy of the U.S. National Library of Medicine. Not affiliated with or endorsed by NLM or NIH. Counts reflect PubMed at the moment you searched and may not match its most current data.</p>
   </footer>
 </div>
-<script>
-(function(){
+<script type="module">
+import { clusterAuthors, institutionKey } from './disambiguate.js';
 'use strict';
 
 const EUTILS = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/';
@@ -469,69 +469,62 @@ const txt = (node, sel) => node.querySelector(sel)?.textContent?.trim() || '';
 async function searchAuthors(name, aff){
   const term = aff && aff.trim() ? `${name}[au] AND "${aff.trim()}"[ad]` : `${name}[au]`;
   let ids = await eutils('esearch.fcgi',
-    { term, retmax:80, retmode:'json', sort:'date' })
+    { term, retmax:120, retmode:'json', sort:'date' })
     .then(j => j.esearchresult.idlist || []);
   /* If the institution filter finds nobody, fall back rather than dead-end. */
   if(!ids.length && aff && aff.trim()){
-    ids = await eutils('esearch.fcgi', { term:`${name}[au]`, retmax:80, retmode:'json', sort:'date' })
+    ids = await eutils('esearch.fcgi', { term:`${name}[au]`, retmax:120, retmode:'json', sort:'date' })
       .then(j => j.esearchresult.idlist || []);
     if(ids.length) searchAuthors.fellBack = true;
   } else searchAuthors.fellBack = false;
   if(!ids.length) return [];
 
+  /* How common is this name across all of PubMed? The clusterer needs it: two
+     compatible records mean one person on a rare surname and nothing at all on a
+     common one. Kolmar A returns 17, Barbaro R 155, Shah N 9846. */
+  const totalForName = await count(`${name}[au]`).catch(() => null);
+
   const doc = xml(await eutils('efetch.fcgi', { id:ids.join(','), retmode:'xml' }));
-  /* Which word is the surname? Taking the first token assumed "Kolmar A" order
-     and broke on "Amanda Kolmar", searching for people surnamed Amanda. PubMed
-     accepts either order, so the surname is whichever query token actually turns
-     up as a LastName in the records that came back. */
+
+  /* Which token is the surname? Taking the first assumed "Kolmar A" order and
+     broke on "Amanda Kolmar". PubMed accepts either, so the surname is whichever
+     query token actually turns up as a LastName in the records. */
   const tokens = name.toLowerCase().split(/[\s,.]+/).filter(t => t.length > 1);
-  const lastNameHits = new Map();
+  const hits = new Map();
   for(const m of doc.querySelectorAll('LastName')){
     const v = (m.textContent || '').toLowerCase();
-    if(tokens.includes(v)) lastNameHits.set(v, (lastNameHits.get(v) || 0) + 1);
+    if(tokens.includes(v)) hits.set(v, (hits.get(v) || 0) + 1);
   }
-  const surname = [...lastNameHits.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || tokens[0];
-  const groups = new Map();
+  const surname = [...hits.entries()].sort((a,b) => b[1]-a[1])[0]?.[0] || tokens[0];
+  searchAuthors.surname = surname;
 
+  const records = [];
   for(const art of doc.querySelectorAll('PubmedArticle')){
-    const title = txt(art, 'ArticleTitle');
+    const pmid = txt(art, 'PMID');
     const journal = txt(art, 'ISOAbbreviation');
-    const year = txt(art, 'PubDate Year') || txt(art, 'PubMedPubDate[PubStatus="entrez"] Year');
+    const year = txt(art, 'PubDate Year');
+    const title = txt(art, 'ArticleTitle');
+    const all = [...art.querySelectorAll('Author')].map(a => {
+      const l = txt(a, 'LastName'), f = txt(a, 'ForeName');
+      return l ? `${l} ${f}`.trim() : '';
+    }).filter(Boolean);
     for(const au of art.querySelectorAll('Author')){
       const last = txt(au, 'LastName');
       if(last.toLowerCase() !== surname) continue;
-      const fore = txt(au, 'ForeName');
-      const orcid = (txt(au, 'Identifier[Source="ORCID"]') || '')
-        .replace(/^https?:\/\/orcid\.org\//, '').trim();
-      const aff = txt(au, 'Affiliation');
-      /* Group on ORCID when PubMed has one. Otherwise group on the first
-         affiliation clause, which is the best available proxy for one person. */
-      const initial = (fore[0] || '').toLowerCase();
-      const inst = institutionKey(aff);
-      const key = ORCID_RE.test(orcid) ? orcid : `n:${initial}|${inst}`;
-      if(!groups.has(key)) groups.set(key, { orcid:ORCID_RE.test(orcid)?orcid:'', name:`${last} ${fore.split(' ').map(w=>w[0]||'').join('')}`.trim(),
-                                             full:`${fore} ${last}`.trim(), aff:'', inst, initial, papers:[], orcids:new Set() });
-      const g = groups.get(key);
-      if(ORCID_RE.test(orcid)) g.orcids.add(orcid);
-      if(aff && !g.aff) g.aff = aff;
-      if(g.papers.length < 3 && title) g.papers.push({ title, journal, year });
-      g.n = (g.n || 0) + 1;
+      records.push({
+        pmid, journal, year, title, last,
+        fore: txt(au, 'ForeName'),
+        orcid: (txt(au, 'Identifier[Source="ORCID"]') || '').replace(/^https?:\/\/orcid\.org\//, '').trim(),
+        aff: txt(au, 'Affiliation'),
+        coauthors: all.filter(a => !a.toLowerCase().startsWith(surname)),
+        mesh: [],
+      });
     }
   }
-  /* An author whose ORCID reached PubMed on only some papers otherwise appears
-     twice: once under the ORCID and once under the name. Fold the nameless one
-     in when the initial and institution agree. */
-  const all = [...groups.values()];
-  const withOrcid = all.filter(g => g.orcid);
-  const merged = [];
-  for(const g of all){
-    if(g.orcid){ merged.push(g); continue; }
-    const owner = withOrcid.find(o => o.initial === g.initial && o.inst && o.inst === g.inst);
-    if(owner){ owner.n += g.n; if(owner.papers.length < 3) owner.papers.push(...g.papers.slice(0, 3 - owner.papers.length)); }
-    else merged.push(g);
-  }
-  searchAuthors.surname = surname;
-  return merged.sort((a,b) => b.n - a.n).slice(0, 8);
+
+  /* The clustering itself lives in disambiguate.js so it can be tested against
+     records captured from live PubMed for real people. See tests/. */
+  return clusterAuthors(records, { totalForName }).slice(0, 8);
 }
 
 function renderCandidates(list, name){
@@ -560,24 +553,6 @@ function renderCandidates(list, name){
 /* The narrowest useful piece of an affiliation string: "Department of
    Pediatrics, Washington University in St. Louis, MO." -> "Washington University
    in St. Louis". The department is too generic and the city too broad. */
-/* Reduce an affiliation string to the institution, dropping the department.
-   Grouping on the raw first clause split one person into ten candidates, because
-   that clause is usually "Department of Pediatrics" and varies paper to paper. */
-/* "washington university" -> "Washington University", for use in a query. */
-function titleCase(s){
-  return s.replace(/\b[a-z]/g, ch => ch.toUpperCase()).trim();
-}
-
-function institutionKey(aff){
-  if(!aff) return '';
-  const clause = (aff.split(/[,;]/).map(x => x.trim())
-    .find(x => /universit|hospital|college|institut|school of medicine|centre|center|clinic/i.test(x)) || '');
-  return clause.toLowerCase()
-    .replace(/\b(school of medicine|medical (school|center|centre)|health (system|sciences)|in st\.? louis|at [a-z ]+)\b/g, '')
-    .replace(/['\u2019]/g, '')          // Children's -> Childrens, not "Children S"
-    .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
-}
-
 function firstAffiliationClause(aff){
   if(!aff) return '';
   const parts = aff.split(/[,;]/).map(x => x.trim()).filter(Boolean);
@@ -870,7 +845,10 @@ async function doSearch(){
     } else if(searchAuthors.fellBack){
       say($('authorStatus'), `No papers matched "${name}" at ${aff.trim()}, so this shows all ${list.length} recent matches for the name instead.`);
     } else {
-      say($('authorStatus'), `${list.length} possible ${list.length===1?'person':'people'} matched${aff.trim()?' at '+aff.trim():''}. Pick the right one.`);
+      const where = aff.trim() ? ' at ' + aff.trim() : '';
+      say($('authorStatus'), list.length === 1
+        ? `One person matched${where}. Records that looked like separate people have been combined.`
+        : `${list.length} people matched${where}. Records for each have already been combined; pick the right person.`);
     }
     renderCandidates(list, name);
   }catch(e){
@@ -951,7 +929,6 @@ $('openBtn').onclick = () => {
 };
 
 refresh();
-})();
 </script>
 </body>
 </html>
