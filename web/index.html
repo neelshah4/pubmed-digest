@@ -226,6 +226,16 @@ footer a{color:var(--slate); text-decoration:underline; text-underline-offset:2p
         <p class="status" id="authorStatus" role="status" aria-live="polite"></p>
         <ul class="cands" id="cands"></ul>
 
+        <hr class="hr" style="margin:var(--lg) 0 var(--md)">
+        <div class="row">
+          <div>
+            <label class="field" for="orcidq">Or add an ORCID iD directly</label>
+            <input type="search" id="orcidq" placeholder="0000-0001-8873-6482" autocomplete="off" spellcheck="false" inputmode="numeric">
+          </div>
+          <button id="addOrcid" type="button" class="ghost">Add</button>
+        </div>
+        <p class="status" id="orcidStatus" role="status" aria-live="polite"></p>
+
         <div id="authorChips" hidden>
           <hr class="hr" style="margin:var(--lg) 0 var(--sm)">
           <span class="label">Following</span>
@@ -538,7 +548,8 @@ function renderAuthors(){
       <span>${esc(a.name)} ${a.orcid
         ? `<span class="orcid">${esc(a.orcid)}</span>`
         : `<span class="orcid">${a.aff ? 'at ' + esc(a.aff) : 'name match only'}</span>`}</span>
-      <span><span class="meta">${a.lastYear === null ? '…' : a.lastYear + ' since ' + (new Date().getFullYear()-1)}</span>
+      <span><span class="meta">${a.total !== undefined ? a.total + ' total' :
+        (a.lastYear === null ? '…' : a.lastYear + ' since ' + (new Date().getFullYear()-1))}</span>
       <button type="button" aria-label="Stop following ${esc(a.name)}" data-rm="${i}">&times;</button></span>
     </li>`).join('');
   $('authorList').querySelectorAll('[data-rm]').forEach(b => b.onclick = () => {
@@ -741,6 +752,58 @@ async function doSearch(){
 }
 $('searchBtn').onclick = doSearch;
 $('authorq').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); doSearch(); }});
+async function addOrcid(){
+  const id = $('orcidq').value.trim().replace(/^https?:\/\/orcid\.org\//, '');
+  if(!ORCID_RE.test(id)){
+    say($('orcidStatus'), 'An ORCID iD looks like 0000-0001-8873-6482, sixteen digits in four groups.', 'err');
+    return;
+  }
+  if(state.authors.some(a => a.orcid === id)){ say($('orcidStatus'), 'Already following that ORCID.'); return; }
+  $('addOrcid').disabled = true;
+  say($('orcidStatus'), 'Checking how many papers carry that ORCID…');
+  try{
+    const n = await count(`${id}[auid]`);
+    if(n === 0){
+      say($('orcidStatus'), 'PubMed has no papers carrying that ORCID yet. Publishers pass it through only when it is attached at submission, so a new or unlinked ORCID can return nothing.', 'err');
+      $('addOrcid').disabled = false; return;
+    }
+    /* Look up how the author is actually named on their own papers, so the chip
+       reads like a person rather than repeating the identifier twice. */
+    let display = id;
+    try{
+      const ids = await eutils('esearch.fcgi', { term:`${id}[auid]`, retmax:1, retmode:'json', sort:'date' })
+        .then(j => j.esearchresult.idlist || []);
+      if(ids.length){
+        const doc = xml(await eutils('efetch.fcgi', { id:ids[0], retmode:'xml' }));
+        for(const au of doc.querySelectorAll('Author')){
+          const got = (txt(au, 'Identifier[Source="ORCID"]') || '').replace(/^https?:\/\/orcid\.org\//, '').trim();
+          if(got === id){
+            const last = txt(au, 'LastName'), fore = txt(au, 'ForeName');
+            if(last) display = `${fore} ${last}`.trim();
+            break;
+          }
+        }
+      }
+    }catch{ /* the name is a nicety; the ORCID is what the query uses */ }
+    state.authors.push({ orcid:id, name:display, aff:'', lastYear:null, total:n });
+    $('orcidq').value = '';
+    /* An ORCID is exact but often incomplete: it only reaches PubMed when the
+       publisher carried it through at submission, so an established author can
+       have far fewer records under their ORCID than under their name. Saying so
+       is the difference between a precise alert and a quietly empty one. */
+    say($('orcidStatus'),
+      n < 10
+        ? `Added. Only ${n} PubMed record${n===1?'':'s'} ${n===1?'carries':'carry'} that ORCID, which usually means most publishers did not pass it through. Consider following the name and institution as well.`
+        : `Added. ${n} PubMed records carry that ORCID.`,
+      n < 10 ? '' : 'ok');
+    renderAuthors(); refresh();
+  }catch{
+    say($('orcidStatus'), 'Could not reach PubMed. Check your connection and try again.', 'err');
+  }finally{ $('addOrcid').disabled = false; }
+}
+$('addOrcid').onclick = addOrcid;
+$('orcidq').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); addOrcid(); }});
+
 $('addJournal').onclick = () => addJournal($('journalq').value);
 $('affq').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); doSearch(); }});
 $('journalq').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); addJournal($('journalq').value); }});
