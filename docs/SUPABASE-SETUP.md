@@ -43,30 +43,28 @@ Add:
 
 | Secret name | Value | Used by |
 |---|---|---|
-| `SUPABASE_URL` | the Project URL from step 3 | `src/store.ts` picks the Supabase backend the moment this is set; also read directly by `src/store-supabase.ts` |
-| `SUPABASE_SERVICE_KEY` | the Secret key from step 3 | same — every table write in `supabase/schema.sql` requires this key's privileges |
+| `SUPABASE_URL` | the Project URL from step 3 | `ingest`, `digest`, `subscribe` (via `src/store.ts`, which selects the Supabase backend the moment this is set) and `pages` |
+| `SUPABASE_SERVICE_KEY` | the Secret key from step 3 | `ingest`, `digest`, `subscribe`; every table write in `supabase/schema.sql` requires this key's privileges |
+| `SUPABASE_ANON_KEY` | the Publishable key from step 3 | `pages` only, written into `web/config.js` at deploy time so the browser can reach the RPCs |
 
-These are the two names `src/store-supabase.ts` reads from `process.env`; it throws a clear error
-naming both if either is missing rather than silently falling back to the file store, so a typo in
-either name surfaces immediately the first time a workflow calls it.
+`SUPABASE_URL` and `SUPABASE_SERVICE_KEY` are the two names `src/store-supabase.ts` reads from
+`process.env`; it throws a clear error naming both if either is missing rather than silently
+falling back to the file store, so a typo in either name surfaces the first time a workflow calls
+it.
 
-**As found this session, not yet wired — flagging rather than fixing silently:** none of
-`.github/workflows/ingest.yml`, `digest.yml`, or `subscribe.yml` currently forward these two
-secrets into their job's `env:` block (they weren't in this task's file list, so this guide
-documents the gap instead of editing CI config on the side). Until each workflow's `env:` section
-adds `SUPABASE_URL: ${{ secrets.SUPABASE_URL }}` and
-`SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}` next to its existing secrets (e.g.
-`NCBI_API_KEY`, `RESEND_API_KEY`), adding the two repository secrets above is necessary but not
-sufficient — the CLIs will keep using the local file store in Actions until that one-line addition
-lands in each workflow file.
+All four workflows already forward what they need. `ingest.yml`, `digest.yml` and `subscribe.yml`
+set `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` at job level rather than step level, because their
+commit-back steps also read `SUPABASE_URL` to decide whether git is still the store.
+`pages.yml` writes `web/config.js` from `SUPABASE_URL` and `SUPABASE_ANON_KEY` before uploading
+the site; that file sets the `window.__SUPABASE_URL__` and `window.__SUPABASE_ANON__` globals
+`web/action.html` reads. It is gitignored and only ever exists on the runner, so the publishable
+key lives in repository secrets alongside the other two rather than committed into `web/`.
 
-Separately, `web/action.html` reads `window.__SUPABASE_URL__` / `window.__SUPABASE_ANON__`, which
-nothing currently sets — `.github/workflows/pages.yml` uploads `web/` as static files with no
-templating step. That page already fails gracefully (it tells the visitor the backend isn't
-configured rather than breaking silently), but making the feedback/unsubscribe/confirm links work
-on the live site needs the Publishable key from step 3 wired into that page some way (a small
-inline `<script>` committed to `web/action.html`, since a publishable key is meant to be public and
-doesn't need to be a secret) — also outside this task's file list.
+Leaving `SUPABASE_ANON_KEY` unset fails more quietly than the other two, because it fails on the
+site rather than in a log: the deploy still succeeds, and `web/action.html` tells each visitor the
+backend is not configured instead of recording their click. The Pages job prints a warning when
+`SUPABASE_URL` is unset, and `tests/workflow-contract.test.ts` asserts that the service key never
+reaches the browser.
 
 ## 5. Verify it worked
 
