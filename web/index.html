@@ -1,921 +1,623 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Critical Care Literature Digest — Sign Up</title>
-<meta name="description" content="Subscribe to a weekly or monthly digest of new critical care literature, filtered by specialty, journal tier, and study type.">
+<title>PubMed Alert Builder</title>
+<meta name="description" content="Build one PubMed email alert that covers every author and journal you follow, instead of one alert each.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root {
-    color-scheme: light;
-    --bg: #f5f6f8;
-    --surface: #ffffff;
-    --surface-inset: #f0f1f4;
-    --text: #16191f;
-    --text-muted: #565d6b;
-    --border: #d4d8de;
-    --border-strong: #aab0ba;
-    --accent: #0b6e7f;
-    --accent-strong: #084f5c;
-    --accent-contrast: #ffffff;
-    --danger: #a32020;
-    --danger-bg: #fdecec;
-    --success: #146c37;
-    --success-bg: #eaf6ee;
-    --focus-ring: #0b6e7f;
-    --shadow: 0 1px 2px rgba(20, 22, 26, 0.06), 0 4px 14px rgba(20, 22, 26, 0.06);
+:root{
+  --paper:#FAF6EE; --tint:#E7E2D6; --tint-deep:#D5CFBF;
+  --ink:#1A1A1A; --ink-muted:#5A5550; --ink-quiet:#8A847E;
+  --slate:#4A5468; --slate-deep:#2F3744; --slate-pale:#C5CCD9;
+  --pos:#2E7D5B; --caution:#B88A2C; --neg:#B23A3A;
+  --rule:rgba(26,26,26,.14); --rule-strong:rgba(26,26,26,.28);
+  --xs:4px; --sm:8px; --md:16px; --lg:24px; --xl:36px; --xxl:48px;
+  --display:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --body:'Source Serif 4',Georgia,'Times New Roman',serif;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --ease-out:cubic-bezier(0.23,1,0.32,1);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#14120F; --tint:#221F1A; --tint-deep:#2B2721;
+    --ink:#F5F0E6; --ink-muted:#B5AEA2; --ink-quiet:#8E877C;
+    --slate:#9AA6BC; --slate-deep:#B8C2D4; --slate-pale:#3A4356;
+    --rule:rgba(245,240,230,.16); --rule-strong:rgba(245,240,230,.30);
   }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--body); font-size:16px; line-height:1.6;
+  font-variant-numeric:tabular-nums;
+}
+.wrap{max-width:1180px; margin:0 auto; padding:var(--xl) var(--lg) var(--xxl)}
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      color-scheme: dark;
-      --bg: #14161a;
-      --surface: #1c1f25;
-      --surface-inset: #23262d;
-      --text: #eceef1;
-      --text-muted: #a3aab5;
-      --border: #343943;
-      --border-strong: #4a5058;
-      --accent: #4fc3d4;
-      --accent-strong: #7bd6e3;
-      --accent-contrast: #08222a;
-      --danger: #ff8a80;
-      --danger-bg: #3a1f1f;
-      --success: #7be0a0;
-      --success-bg: #1c3324;
-      --focus-ring: #4fc3d4;
-      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 18px rgba(0, 0, 0, 0.35);
-    }
-  }
+/* ---------- masthead: top-left lead, no hero image ---------- */
+.masthead{border-bottom:1px solid var(--rule-strong); padding-bottom:var(--lg); margin-bottom:var(--xl)}
+.overline{
+  font-family:var(--display); font-size:11px; font-weight:500;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--ink-quiet); margin:0 0 var(--sm)
+}
+h1{
+  font-family:var(--display); font-weight:500; font-size:clamp(30px,4.6vw,48px);
+  line-height:1.08; letter-spacing:-.022em; margin:0 0 var(--md); max-width:19ch
+}
+.standfirst{font-size:18px; line-height:1.55; color:var(--ink-muted); max-width:56ch; margin:0}
+.standfirst b{color:var(--ink); font-weight:600}
 
-  * { box-sizing: border-box; }
+/* ---------- 60/40 asymmetric: work left, readout right ---------- */
+.cols{display:grid; grid-template-columns:minmax(0,1.5fr) minmax(0,1fr); gap:var(--xl); align-items:start}
+@media (max-width:900px){ .cols{grid-template-columns:1fr; gap:var(--lg)} }
 
-  html { -webkit-text-size-adjust: 100%; }
+/* ---------- signature: top-label hairline card ---------- */
+.card{background:var(--paper); border:1px solid var(--rule); padding:var(--lg); margin-bottom:var(--lg)}
+.card > .label{
+  font-family:var(--display); font-size:11px; font-weight:500; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-quiet); display:block; margin-bottom:var(--sm)
+}
+.card > .label + .hr{border:0; border-top:1px solid var(--rule-strong); margin:0 0 var(--md)}
+.card h2{font-family:var(--display); font-weight:500; font-size:19px; letter-spacing:-.01em; margin:0 0 var(--sm)}
+.card p.hint{font-size:15px; color:var(--ink-muted); margin:0 0 var(--md); max-width:52ch}
 
-  body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--text);
-    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    line-height: 1.5;
-    font-size: 16px;
-  }
+/* ---------- controls ---------- */
+label.field{display:block; font-family:var(--display); font-size:13px; font-weight:500; margin-bottom:var(--xs)}
+input[type=text], input[type=search], select{
+  width:100%; font-family:var(--body); font-size:16px; color:var(--ink);
+  background:var(--tint); border:1px solid var(--rule-strong); border-radius:4px;
+  padding:11px var(--md); transition:border-color 160ms var(--ease-out)
+}
+input::placeholder{color:var(--ink-quiet)}
+input:hover, select:hover{border-color:var(--slate)}
+:focus-visible{outline:2px solid var(--slate-deep); outline-offset:2px}
+input:focus, select:focus{outline:2px solid var(--slate-deep); outline-offset:2px; border-color:var(--slate)}
 
-  a { color: var(--accent-strong); }
+.row{display:flex; gap:var(--sm); align-items:flex-end}
+.row > *:first-child{flex:1; min-width:0}
 
-  .wrap {
-    max-width: 640px;
-    margin: 0 auto;
-    padding: 2.5rem 1.25rem 4rem;
-  }
+button{
+  font-family:var(--display); font-size:14px; font-weight:500; cursor:pointer;
+  border-radius:4px; padding:11px var(--md); border:1px solid var(--slate);
+  background:var(--slate); color:var(--paper);
+  transition:background-color 160ms var(--ease-out), border-color 160ms var(--ease-out)
+}
+button:hover{background:var(--slate-deep); border-color:var(--slate-deep)}
+button:active{transform:none}
+button[disabled]{opacity:.45; cursor:not-allowed}
+button.ghost{background:transparent; color:var(--ink); border-color:var(--rule-strong)}
+button.ghost:hover{background:var(--tint); border-color:var(--slate)}
+button.tiny{font-size:12px; padding:5px 10px}
 
-  header.page-head {
-    margin-bottom: 2rem;
-  }
+fieldset{border:0; margin:0 0 var(--md); padding:0}
+legend{font-family:var(--display); font-size:13px; font-weight:500; padding:0; margin-bottom:var(--sm)}
+.choices{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:var(--sm)}
+.choice{
+  display:flex; align-items:flex-start; gap:var(--sm); padding:10px var(--md);
+  border:1px solid var(--rule-strong); border-radius:4px; cursor:pointer;
+  font-size:15px; transition:border-color 160ms var(--ease-out), background-color 160ms var(--ease-out)
+}
+.choice:hover{border-color:var(--slate); background:var(--tint)}
+.choice input{margin:3px 0 0; accent-color:var(--slate); flex:none}
+.choice:has(input:checked){border-color:var(--slate); background:var(--tint)}
+.choice .cap{font-family:var(--display); font-size:11px; color:var(--ink-quiet); display:block}
 
-  header.page-head h1 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    margin: 0 0 0.5rem;
-    letter-spacing: -0.01em;
-  }
+/* ---------- candidate cards (author disambiguation) ---------- */
+.cands{list-style:none; margin:var(--md) 0 0; padding:0; display:grid; gap:var(--sm)}
+.cand{border:1px solid var(--rule); border-left:3px solid var(--slate-pale); padding:var(--md); background:var(--tint)}
+.cand:hover{border-left-color:var(--slate)}
+.cand .who{font-family:var(--display); font-weight:500; font-size:16px; margin:0 0 2px}
+.cand .aff{font-size:14px; color:var(--ink-muted); margin:0 0 var(--sm); line-height:1.45}
+.cand .titles{margin:var(--sm) 0 var(--md); padding:0 0 0 var(--md); border-left:1px solid var(--rule);
+  font-size:14px; color:var(--ink-muted); line-height:1.5}
+.cand .titles li{margin-bottom:3px}
+.orcid{font-family:var(--mono); font-size:12px; color:var(--ink-quiet)}
 
-  header.page-head p {
-    margin: 0;
-    color: var(--text-muted);
-    font-size: 0.975rem;
-    max-width: 46em;
-  }
+/* ---------- chips ---------- */
+.chips{list-style:none; margin:var(--sm) 0 0; padding:0; display:grid; gap:var(--xs)}
+.chip{
+  display:flex; align-items:center; justify-content:space-between; gap:var(--sm);
+  padding:9px var(--md); background:var(--tint); border:1px solid var(--rule); border-radius:4px; font-size:15px
+}
+.chip .meta{font-family:var(--display); font-size:12px; color:var(--ink-quiet); white-space:nowrap}
+.chip button{background:none; border:0; color:var(--ink-quiet); padding:2px 6px; font-size:18px; line-height:1}
+.chip button:hover{color:var(--neg); background:none}
 
-  form, .panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    box-shadow: var(--shadow);
-    padding: 1.75rem;
-  }
+/* ---------- readout (the 40 that carries the punchline) ---------- */
+.readout{position:sticky; top:var(--lg)}
+@media (max-width:900px){ .readout{position:static} }
+.query{
+  font-family:var(--mono); font-size:13px; line-height:1.65; color:var(--ink);
+  background:var(--tint-deep); border:1px solid var(--rule-strong); padding:var(--md);
+  white-space:pre-wrap; word-break:break-word; max-height:230px; overflow:auto; margin:0 0 var(--md)
+}
+.stat{display:flex; align-items:baseline; gap:var(--sm); margin-bottom:var(--xs)}
+.stat .n{font-family:var(--display); font-weight:500; font-size:44px; line-height:1; letter-spacing:-.03em}
+.stat .u{font-size:15px; color:var(--ink-muted)}
+.substat{font-size:14px; color:var(--ink-muted); margin:0 0 var(--md)}
+.gauge{height:3px; background:var(--tint-deep); margin:var(--sm) 0 var(--md); overflow:hidden}
+.gauge i{display:block; height:100%; background:var(--slate); width:0; transition:width 240ms var(--ease-out)}
 
-  section.form-section {
-    padding-bottom: 1.5rem;
-    margin-bottom: 1.5rem;
-    border-bottom: 1px solid var(--border);
-  }
+/* ---------- sample email ---------- */
+.sample{border:1px solid var(--rule); background:var(--tint); padding:var(--md); font-size:14px}
+.sample .from{font-family:var(--display); font-size:12px; color:var(--ink-quiet); border-bottom:1px solid var(--rule);
+  padding-bottom:var(--sm); margin-bottom:var(--sm)}
+.sample ol{margin:0; padding-left:var(--md); line-height:1.5}
+.sample li{margin-bottom:var(--sm)}
+.sample .j{font-style:italic; color:var(--ink-muted)}
 
-  section.form-section:last-of-type {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
-  }
-
-  section.form-section > h2 {
-    font-size: 0.95rem;
-    font-weight: 600;
-    margin: 0 0 0.25rem;
-  }
-
-  section.form-section > p.hint {
-    margin: 0 0 0.9rem;
-    color: var(--text-muted);
-    font-size: 0.85rem;
-  }
-
-  fieldset {
-    border: none;
-    margin: 0;
-    padding: 0;
-  }
-
-  legend {
-    font-weight: 600;
-    font-size: 0.95rem;
-    padding: 0;
-    margin-bottom: 0.25rem;
-  }
-
-  legend + p.hint {
-    margin-top: 0;
-    margin-bottom: 0.9rem;
-    color: var(--text-muted);
-    font-size: 0.85rem;
-  }
-
-  label {
-    font-size: 0.9rem;
-    font-weight: 500;
-  }
-
-  .field {
-    margin-bottom: 1rem;
-  }
-
-  .field:last-child { margin-bottom: 0; }
-
-  .field > label {
-    display: block;
-    margin-bottom: 0.4rem;
-  }
-
-  input[type="email"],
-  input[type="text"] {
-    width: 100%;
-    font: inherit;
-    font-size: 1rem;
-    padding: 0.6rem 0.75rem;
-    border: 1px solid var(--border-strong);
-    border-radius: 8px;
-    background: var(--surface);
-    color: var(--text);
-  }
-
-  input[type="email"]::placeholder,
-  input[type="text"]::placeholder {
-    color: var(--text-muted);
-    opacity: 0.85;
-  }
-
-  input:focus-visible,
-  button:focus-visible,
-  summary:focus-visible,
-  a:focus-visible {
-    outline: 3px solid var(--focus-ring);
-    outline-offset: 2px;
-  }
-
-  /* Fallback for browsers without :focus-visible support */
-  input:focus,
-  button:focus,
-  summary:focus {
-    outline: 3px solid var(--focus-ring);
-    outline-offset: 2px;
-  }
-
-  .choice-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.55rem;
-    padding: 0.4rem 0;
-  }
-
-  .choice-row input[type="radio"],
-  .choice-row input[type="checkbox"] {
-    width: 1.15rem;
-    height: 1.15rem;
-    margin-top: 0.15rem;
-    accent-color: var(--accent);
-    flex-shrink: 0;
-  }
-
-  .choice-row label {
-    font-weight: 400;
-    font-size: 0.95rem;
-    cursor: pointer;
-  }
-
-  .choice-grid {
-    display: flex;
-    flex-direction: column;
-  }
-
-  details.advanced {
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: var(--surface-inset);
-    padding: 0;
-    overflow: hidden;
-  }
-
-  details.advanced > summary {
-    cursor: pointer;
-    list-style: none;
-    padding: 0.85rem 1rem;
-    font-weight: 600;
-    font-size: 0.92rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    user-select: none;
-  }
-
-  details.advanced > summary::-webkit-details-marker { display: none; }
-
-  details.advanced > summary::before {
-    content: "▸";
-    display: inline-block;
-    transition: transform 0.15s ease;
-    color: var(--accent-strong);
-  }
-
-  details.advanced[open] > summary::before {
-    transform: rotate(90deg);
-  }
-
-  .advanced-body {
-    padding: 0 1rem 1.1rem;
-    border-top: 1px solid var(--border);
-  }
-
-  .advanced-body > .adv-block {
-    padding-top: 1.1rem;
-  }
-
-  .advanced-body > .adv-block + .adv-block {
-    margin-top: 1.1rem;
-    border-top: 1px dashed var(--border);
-  }
-
-  .orcid-row {
-    display: flex;
-    gap: 0.5rem;
-    align-items: flex-start;
-    margin-bottom: 0.6rem;
-  }
-
-  .orcid-row .orcid-field {
-    flex: 1;
-  }
-
-  .orcid-row input[type="text"] {
-    font-variant-numeric: tabular-nums;
-    letter-spacing: 0.01em;
-  }
-
-  .orcid-row input[aria-invalid="true"] {
-    border-color: var(--danger);
-  }
-
-  .icon-btn {
-    flex-shrink: 0;
-    border: 1px solid var(--border-strong);
-    background: var(--surface);
-    color: var(--text-muted);
-    border-radius: 8px;
-    width: 2.6rem;
-    height: 2.6rem;
-    font-size: 1.1rem;
-    line-height: 1;
-    cursor: pointer;
-  }
-
-  .icon-btn:hover { color: var(--danger); border-color: var(--danger); }
-
-  .add-orcid {
-    margin-top: 0.25rem;
-    background: none;
-    border: 1px dashed var(--border-strong);
-    color: var(--accent-strong);
-    border-radius: 8px;
-    padding: 0.5rem 0.85rem;
-    font: inherit;
-    font-weight: 600;
-    font-size: 0.9rem;
-    cursor: pointer;
-  }
-
-  .add-orcid:hover { border-style: solid; }
-
-  .error-text {
-    color: var(--danger);
-    font-size: 0.82rem;
-    margin: 0.3rem 0 0;
-  }
-
-  .error-text:empty { display: none; }
-
-  .field-error input { border-color: var(--danger); }
-
-  button.submit {
-    width: 100%;
-    background: var(--accent);
-    color: var(--accent-contrast);
-    border: none;
-    border-radius: 8px;
-    padding: 0.8rem 1rem;
-    font: inherit;
-    font-weight: 600;
-    font-size: 1rem;
-    cursor: pointer;
-    margin-top: 0.5rem;
-  }
-
-  button.submit:hover { background: var(--accent-strong); }
-
-  button.submit:disabled {
-    opacity: 0.65;
-    cursor: not-allowed;
-  }
-
-  .status-banner {
-    border-radius: 8px;
-    padding: 0.85rem 1rem;
-    font-size: 0.9rem;
-    margin-bottom: 1.25rem;
-  }
-
-  .status-banner.error {
-    background: var(--danger-bg);
-    color: var(--danger);
-    border: 1px solid var(--danger);
-  }
-
-  .status-banner.success {
-    background: var(--success-bg);
-    color: var(--success);
-    border: 1px solid var(--success);
-  }
-
-  .success-panel h2 {
-    margin: 0 0 0.5rem;
-    font-size: 1.15rem;
-  }
-
-  .success-panel p {
-    color: var(--text-muted);
-    margin: 0;
-  }
-
-  [hidden] { display: none !important; }
-
-  .req {
-    color: var(--danger);
-    font-weight: 600;
-  }
-
-  .js-required-notice {
-    background: var(--danger-bg);
-    color: var(--danger);
-    border: 1px solid var(--danger);
-    border-radius: 8px;
-    padding: 0.85rem 1rem;
-    margin-bottom: 1.25rem;
-    font-size: 0.9rem;
-  }
-
-  footer.page-foot {
-    margin-top: 2rem;
-    text-align: center;
-    color: var(--text-muted);
-    font-size: 0.8rem;
-  }
-
-  @media (max-width: 420px) {
-    .wrap { padding: 1.5rem 0.85rem 3rem; }
-    form, .panel { padding: 1.25rem; }
-  }
+/* ---------- steps ---------- */
+.steps{counter-reset:s; list-style:none; margin:var(--md) 0 0; padding:0}
+.steps li{counter-increment:s; position:relative; padding-left:34px; margin-bottom:var(--md); font-size:15px}
+.steps li::before{
+  content:counter(s); position:absolute; left:0; top:1px; width:22px; height:22px;
+  border:1px solid var(--slate); border-radius:50%; color:var(--slate);
+  font-family:var(--display); font-size:12px; display:grid; place-items:center
+}
+.cta{display:inline-block; text-decoration:none; text-align:center; margin-top:var(--sm)}
+.status{font-size:14px; color:var(--ink-muted); margin:var(--sm) 0 0; min-height:1.4em}
+.status.err{color:var(--neg)}
+.status.ok{color:var(--pos)}
+.empty{font-size:15px; color:var(--ink-quiet); font-style:italic; margin:var(--sm) 0 0}
+footer{margin-top:var(--xxl); padding-top:var(--lg); border-top:1px solid var(--rule); font-size:13px; color:var(--ink-quiet); max-width:70ch}
+footer a{color:var(--slate); text-decoration:underline; text-underline-offset:2px}
+.sr{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header class="page-head">
-    <h1>Critical care literature digest</h1>
-    <p>A weekly or monthly email of new critical care research, filtered to the journals, study types, and topics you choose. No tracking, no analytics — just the digest.</p>
+
+  <header class="masthead">
+    <p class="overline">PubMed alert builder</p>
+    <h1>One alert that covers everything you follow.</h1>
+    <p class="standfirst">PubMed sends a separate email for every saved search, so following eight things means eight emails. This composes <b>one query</b> from the people and journals you pick, shows you how much mail to expect, then hands it to PubMed to send.</p>
   </header>
 
-  <noscript>
-    <p class="js-required-notice">This form requires JavaScript to validate input and submit your subscription. Please enable JavaScript and reload the page.</p>
-  </noscript>
+  <div class="cols">
 
-  <div id="status-region" aria-live="polite"></div>
+    <!-- ================= LEFT: the work ================= -->
+    <div>
 
-  <form id="signup-form" novalidate>
-
-    <section class="form-section">
-      <h2>Email</h2>
-      <div class="field">
-        <label for="email">Email address <span class="req" aria-hidden="true">*</span></label>
-        <input type="email" id="email" name="email" autocomplete="email" required
-               aria-describedby="email-error" aria-required="true">
-        <p class="error-text" id="email-error" role="alert"></p>
-      </div>
-    </section>
-
-    <section class="form-section">
-      <fieldset>
-        <legend>Cadence <span class="req" aria-hidden="true">*</span></legend>
-        <p class="hint">How often you'd like the digest delivered.</p>
-        <div class="choice-grid" role="radiogroup" aria-describedby="cadence-error">
-          <div class="choice-row">
-            <input type="radio" id="cadence-weekly" name="cadence" value="weekly" checked>
-            <label for="cadence-weekly">Weekly</label>
+      <section class="card">
+        <span class="label">Step one</span><hr class="hr">
+        <h2>Follow specific people</h2>
+        <p class="hint">Search a name, then pick the right person. PubMed does not group authors, so several researchers can share a name and initial. Each result shows recent titles and an affiliation so you can tell them apart.</p>
+        <div class="row">
+          <div>
+            <label class="field" for="authorq">Author name</label>
+            <input type="search" id="authorq" placeholder="Barbaro R" autocomplete="off" spellcheck="false">
           </div>
-          <div class="choice-row">
-            <input type="radio" id="cadence-monthly" name="cadence" value="monthly">
-            <label for="cadence-monthly">Monthly</label>
-          </div>
+          <button id="searchBtn" type="button">Search</button>
         </div>
-        <p class="error-text" id="cadence-error" role="alert"></p>
-      </fieldset>
-    </section>
+        <p class="status" id="authorStatus" role="status" aria-live="polite"></p>
+        <ul class="cands" id="cands"></ul>
 
-    <section class="form-section">
-      <fieldset>
-        <legend>Specialty templates <span class="req" aria-hidden="true">*</span></legend>
-        <p class="hint">Pick at least one. Each template controls the journal list and topic filters applied to your digest.</p>
-        <div class="choice-grid" aria-describedby="templates-error">
-          <div class="choice-row">
-            <input type="checkbox" id="template-peds-cc" name="templates" value="peds-cc">
-            <label for="template-peds-cc">Peds Critical Care</label>
-          </div>
-          <div class="choice-row">
-            <input type="checkbox" id="template-adult-cc" name="templates" value="adult-cc">
-            <label for="template-adult-cc">Adult Critical Care</label>
-          </div>
-          <div class="choice-row">
-            <input type="checkbox" id="template-neuro-cc" name="templates" value="neurocrit">
-            <label for="template-neuro-cc">Neurocritical Care</label>
-          </div>
+        <div id="authorChips" hidden>
+          <hr class="hr" style="margin:var(--lg) 0 var(--sm)">
+          <span class="label">Following</span>
+          <ul class="chips" id="authorList"></ul>
         </div>
-        <p class="error-text" id="templates-error" role="alert"></p>
-      </fieldset>
-    </section>
+      </section>
 
-    <section class="form-section">
-      <details class="advanced" id="advanced-details">
-        <summary id="advanced-summary" aria-controls="advanced-body">Advanced filters</summary>
-        <div class="advanced-body" id="advanced-body">
-
-          <div class="adv-block">
-            <fieldset>
-              <legend>Journal tier</legend>
-              <p class="hint">Narrower tiers mean fewer, higher-signal papers.</p>
-              <div class="choice-grid">
-                <div class="choice-row">
-                  <input type="radio" id="tier-1" name="journalTier" value="tier1">
-                  <label for="tier-1">Tier 1 only</label>
-                </div>
-                <div class="choice-row">
-                  <input type="radio" id="tier-1-2" name="journalTier" value="tier12" checked>
-                  <label for="tier-1-2">Tiers 1–2</label>
-                </div>
-                <div class="choice-row">
-                  <input type="radio" id="tier-all" name="journalTier" value="all">
-                  <label for="tier-all">All tiers</label>
-                </div>
-              </div>
-            </fieldset>
+      <section class="card">
+        <span class="label">Step two</span><hr class="hr">
+        <h2>Follow journals</h2>
+        <p class="hint">Pick from the curated pediatric critical care set, or add any journal by name. Counts are pulled live from PubMed so you can see what each one actually contributes.</p>
+        <fieldset>
+          <legend>Curated: pediatric critical care</legend>
+          <div class="choices" id="curated"></div>
+        </fieldset>
+        <div class="row">
+          <div>
+            <label class="field" for="journalq">Add another journal</label>
+            <input type="search" id="journalq" placeholder="Pediatr Cardiol" autocomplete="off" spellcheck="false">
           </div>
-
-          <div class="adv-block">
-            <fieldset>
-              <legend>Publication types</legend>
-              <p class="hint">Leave all unchecked to include every study type.</p>
-              <div class="choice-grid">
-                <div class="choice-row">
-                  <input type="checkbox" id="pubtype-rct" name="pubTypes" value="rct">
-                  <label for="pubtype-rct">RCT</label>
-                </div>
-                <div class="choice-row">
-                  <input type="checkbox" id="pubtype-meta" name="pubTypes" value="meta-analysis-systematic-review">
-                  <label for="pubtype-meta">Meta-Analysis / Systematic Review</label>
-                </div>
-                <div class="choice-row">
-                  <input type="checkbox" id="pubtype-obs" name="pubTypes" value="observational">
-                  <label for="pubtype-obs">Observational</label>
-                </div>
-                <div class="choice-row">
-                  <input type="checkbox" id="pubtype-guideline" name="pubTypes" value="practice-guideline">
-                  <label for="pubtype-guideline">Practice Guideline</label>
-                </div>
-              </div>
-            </fieldset>
-          </div>
-
-          <div class="adv-block">
-            <div class="field">
-              <label for="extra-keywords">Extra keywords</label>
-              <input type="text" id="extra-keywords" name="extraKeywords"
-                     placeholder="e.g. driving pressure, EIT, VA ECMO"
-                     aria-describedby="extra-keywords-hint">
-              <p class="hint" id="extra-keywords-hint" style="margin-top:0.4rem;">Comma-separated. Matched against title and abstract in addition to your templates.</p>
-            </div>
-          </div>
-
+          <button id="addJournal" type="button" class="ghost">Add</button>
         </div>
-      </details>
-    </section>
+        <p class="status" id="journalStatus" role="status" aria-live="polite"></p>
+        <ul class="chips" id="journalList"></ul>
+      </section>
 
-    <section class="form-section">
-      <h2>Author watch (ORCID)</h2>
-      <p class="hint">Track specific authors by ORCID iD. Plain author names are deliberately not supported — PubMed name matching is too unreliable to use for a watch list.</p>
-      <div id="orcid-rows"></div>
-      <button type="button" class="add-orcid" id="add-orcid-btn">+ Add ORCID iD</button>
-    </section>
+      <section class="card">
+        <span class="label">Step three</span><hr class="hr">
+        <h2>Shape and schedule</h2>
+        <fieldset>
+          <legend>How often should PubMed send it</legend>
+          <div class="choices">
+            <label class="choice"><input type="radio" name="cadence" value="weekly" checked><span>Weekly<span class="cap">Monday morning</span></span></label>
+            <label class="choice"><input type="radio" name="cadence" value="monthly"><span>Monthly<span class="cap">First of the month</span></span></label>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Study types <span style="font-weight:400;color:var(--ink-quiet)">(leave all unchecked for everything)</span></legend>
+          <div class="choices" id="ptypes"></div>
+        </fieldset>
+        <fieldset>
+          <legend>Delivery</legend>
+          <div class="choices">
+            <label class="choice"><input type="radio" name="split" value="combined" checked><span>One alert<span class="cap">Everything in a single email</span></span></label>
+            <label class="choice"><input type="radio" name="split" value="split"><span>Separate alerts<span class="cap">One per author and journal</span></span></label>
+          </div>
+        </fieldset>
+      </section>
 
-    <button type="submit" class="submit" id="submit-btn">Subscribe</button>
-  </form>
+    </div>
 
-  <div class="panel success-panel" id="success-panel" hidden>
-    <h2 id="success-heading">Check your inbox</h2>
-    <p id="success-message">We've sent a confirmation link to your email address. Click it to activate your digest — subscriptions aren't active until confirmed.</p>
+    <!-- ================= RIGHT: the readout ================= -->
+    <div class="readout">
+
+      <section class="card">
+        <span class="label">Expected volume</span><hr class="hr">
+        <div class="stat"><span class="n" id="volN">0</span><span class="u" id="volU">papers per email</span></div>
+        <div class="gauge"><i id="gauge"></i></div>
+        <p class="substat" id="volNote">Add an author or a journal to see an estimate.</p>
+        <p class="substat" id="mailNote"></p>
+      </section>
+
+      <section class="card">
+        <span class="label">Your query</span><hr class="hr">
+        <pre class="query" id="queryOut" aria-live="polite">Nothing selected yet.</pre>
+        <button class="ghost tiny" id="copyBtn" type="button">Copy query</button>
+        <p class="status" id="copyStatus" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="card">
+        <span class="label">Sample email</span><hr class="hr">
+        <div class="sample">
+          <div class="from">From: efback@ncbi.nlm.nih.gov<br>Subject: <span id="sampleSubj">PubMed alert</span></div>
+          <ol id="sampleList"><li class="empty" style="list-style:none;margin-left:-16px">Your most recent matches appear here once you pick something.</li></ol>
+        </div>
+      </section>
+
+      <section class="card">
+        <span class="label">Step four</span><hr class="hr">
+        <h2>Hand it to PubMed</h2>
+        <p class="hint">PubMed sends the mail, not this site. Your address stays with your free My NCBI account, so you enter it once and never again.</p>
+        <ol class="steps">
+          <li>Open your query on PubMed using the button below.</li>
+          <li>Sign in to My NCBI, or create a free account.</li>
+          <li>Click <b>Create alert</b> under the search box, then choose <span id="cadenceEcho">weekly</span>.</li>
+        </ol>
+        <button class="cta" id="openBtn" type="button" disabled>Open on PubMed</button>
+        <p class="status" id="openStatus" role="status" aria-live="polite"></p>
+      </section>
+
+    </div>
   </div>
 
-  <footer class="page-foot">
-    <p>No tracking. No analytics. No cookies. Unsubscribe link included in every digest.</p>
+  <footer>
+    <p>Queries are built in your browser and sent straight to PubMed. Nothing is stored, no account is created here, and no email address is ever collected by this page.</p>
+    <p>Data courtesy of the U.S. National Library of Medicine. Not affiliated with or endorsed by NLM or NIH. Counts reflect PubMed at the moment you searched and may not match its most current data.</p>
   </footer>
 </div>
-
 <script>
-(function () {
-  "use strict";
+(function(){
+'use strict';
 
-  // Two ways this form can actually submit a signup. Set SIGNUP_MODE before
-  // deploying.
-  //   'github' (default) — needs no backend at all. Builds a prefilled
-  //     GitHub Issue Form URL (.github/ISSUE_TEMPLATE/subscribe.yml) and
-  //     opens it; the visitor reviews and clicks "Submit new issue" on
-  //     GitHub itself, and .github/workflows/subscribe.yml takes it from
-  //     there (src/signup-parse.ts parses it, the subscriber is recorded,
-  //     the issue is commented on then closed and locked).
-  //   'api' — POSTs JSON to `${API_BASE}/subscribe` (the original behavior;
-  //     requires a live backend at API_BASE).
-  const SIGNUP_MODE = "github";
-  const API_BASE = "https://api.example.com";
+const EUTILS = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/';
+const TOOL   = 'pubmed-alert-builder';
 
-  // Must match .github/ISSUE_TEMPLATE/subscribe.yml exactly: GITHUB_REPO is
-  // this repo, GITHUB_ISSUE_TEMPLATE is that file's name, and every key in
-  // buildGithubIssueUrl() below is one of that template's field `id`s.
-  const GITHUB_REPO = "neelshah4/pubmed-digest";
-  const GITHUB_ISSUE_TEMPLATE = "subscribe.yml";
+/* PubMed allows 3 requests/second per IP. These calls come from the visitor's
+   own browser, so the budget is theirs, but a burst still trips it. One request
+   at a time, spaced. */
+let chain = Promise.resolve();
+const wait = ms => new Promise(r => setTimeout(r, ms));
+function eutils(fn, params){
+  const run = async () => {
+    const qs = new URLSearchParams({ db:'pubmed', tool:TOOL, ...params });
+    const res = await fetch(EUTILS + fn + '?' + qs);
+    if(!res.ok) throw new Error('PubMed returned ' + res.status);
+    await wait(360);
+    return fn === 'efetch.fcgi' ? res.text() : res.json();
+  };
+  chain = chain.then(run, run);
+  return chain;
+}
+/* `AND 30[edat]` is not PubMed syntax and silently matches nothing. The recency
+   window is a request parameter (reldate + datetype), never part of the term. */
+const count = (term, days) => eutils('esearch.fcgi',
+    Object.assign({ term, retmax:0, retmode:'json' },
+                  days ? { reldate:days, datetype:'edat' } : {}))
+  .then(j => parseInt(j.esearchresult.count, 10) || 0);
 
-  const ORCID_RE = /^\d{4}-\d{4}-\d{4}-\d{3}[0-9X]$/;
+const ORCID_RE = /^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$/;
+const $  = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const say = (el, msg, cls='') => { el.className = 'status ' + cls; el.textContent = msg; };
 
-  const form = document.getElementById("signup-form");
-  const statusRegion = document.getElementById("status-region");
-  const submitBtn = document.getElementById("submit-btn");
-  const successPanel = document.getElementById("success-panel");
-  const successHeading = document.getElementById("success-heading");
-  const successMessage = document.getElementById("success-message");
-  const orcidRows = document.getElementById("orcid-rows");
-  const addOrcidBtn = document.getElementById("add-orcid-btn");
+/* ---------------- state ---------------- */
+const state = { authors:[], journals:[], cadence:'weekly', ptypes:[], split:'combined' };
 
-  let orcidRowCount = 0;
+const CURATED = ["Pediatr Crit Care Med","Crit Care Med","Intensive Care Med","Am J Respir Crit Care Med",
+  "Crit Care","Lancet Respir Med","Chest","Ann Intensive Care","Crit Care Explor","J Crit Care",
+  "Resuscitation","Neurocrit Care","Respir Care","Intensive Care Med Paediatr Neonatal","ASAIO J",
+  "Eur Respir J","Cochrane Database Syst Rev"];
 
-  function addOrcidRow(initialValue) {
-    orcidRowCount += 1;
-    const idx = orcidRowCount;
-    const row = document.createElement("div");
-    row.className = "orcid-row";
-    row.dataset.rowIndex = String(idx);
+const PTYPES = [
+  ['Randomized Controlled Trial', 'Trials'],
+  ['Meta-Analysis',               'Meta-analyses'],
+  ['Systematic Review',           'Systematic reviews'],
+  ['Practice Guideline',          'Guidelines'],
+  ['Observational Study',         'Observational'],
+  ['Multicenter Study',           'Multicenter'],
+];
 
-    const fieldWrap = document.createElement("div");
-    fieldWrap.className = "orcid-field";
+/* ---------------- query composition ---------------- */
+function authorClause(a){ return a.orcid ? `${a.orcid}[auid]` : `"${a.name}"[au]`; }
+function orGroup(parts){ return parts.length > 1 ? '(' + parts.join(' OR ') + ')' : parts[0]; }
 
-    const label = document.createElement("label");
-    label.setAttribute("for", "orcid-" + idx);
-    label.className = "visually-hidden-label";
-    label.style.position = "absolute";
-    label.style.width = "1px";
-    label.style.height = "1px";
-    label.style.overflow = "hidden";
-    label.style.clip = "rect(0 0 0 0)";
-    label.textContent = "ORCID iD #" + idx;
+function buildQuery(){
+  const who = state.authors.map(authorClause);
+  const where = state.journals.map(j => `"${j.name}"[ta]`);
+  const subject = [...who, ...where];
+  if(!subject.length) return '';
+  let q = orGroup(subject);
+  if(state.ptypes.length) q += ' AND ' + orGroup(state.ptypes.map(p => `"${p}"[pt]`));
+  return q;
+}
 
-    const input = document.createElement("input");
-    input.type = "text";
-    input.id = "orcid-" + idx;
-    input.name = "orcid";
-    input.placeholder = "0000-0002-1825-0097";
-    input.setAttribute("inputmode", "text");
-    input.setAttribute("autocomplete", "off");
-    input.setAttribute("aria-describedby", "orcid-" + idx + "-error");
+function buildSplitQueries(){
+  const out = [];
+  for(const a of state.authors) out.push({ label:a.name, q:withTypes(authorClause(a)) });
+  for(const j of state.journals) out.push({ label:j.name, q:withTypes(`"${j.name}"[ta]`) });
+  return out;
+}
+function withTypes(base){
+  return state.ptypes.length ? `${base} AND ` + orGroup(state.ptypes.map(p => `"${p}"[pt]`)) : base;
+}
+const pubmedUrl = q => 'https://pubmed.ncbi.nlm.nih.gov/?' +
+  new URLSearchParams({ term:q, sort:'date' });
 
-    const error = document.createElement("p");
-    error.className = "error-text";
-    error.id = "orcid-" + idx + "-error";
-    error.setAttribute("role", "alert");
+/* ---------------- author search + disambiguation ---------------- */
+function xml(text){ return new DOMParser().parseFromString(text, 'application/xml'); }
+const txt = (node, sel) => node.querySelector(sel)?.textContent?.trim() || '';
 
-    input.addEventListener("input", function () {
-      validateOrcidRow(row, false);
-    });
-    input.addEventListener("blur", function () {
-      if (input.value.trim()) {
-        input.value = input.value.trim().toUpperCase();
-      }
-      validateOrcidRow(row, true);
-    });
+async function searchAuthors(name){
+  const ids = await eutils('esearch.fcgi',
+    { term:`${name}[au]`, retmax:60, retmode:'json', sort:'date' })
+    .then(j => j.esearchresult.idlist || []);
+  if(!ids.length) return [];
 
-    fieldWrap.appendChild(label);
-    fieldWrap.appendChild(input);
-    fieldWrap.appendChild(error);
+  const doc = xml(await eutils('efetch.fcgi', { id:ids.join(','), retmode:'xml' }));
+  const surname = name.trim().split(/[\s,]+/)[0].toLowerCase();
+  const groups = new Map();
 
-    const removeBtn = document.createElement("button");
-    removeBtn.type = "button";
-    removeBtn.className = "icon-btn";
-    removeBtn.setAttribute("aria-label", "Remove ORCID iD #" + idx);
-    removeBtn.textContent = "✕";
-    removeBtn.addEventListener("click", function () {
-      row.remove();
-    });
-
-    row.appendChild(fieldWrap);
-    row.appendChild(removeBtn);
-    orcidRows.appendChild(row);
-
-    if (initialValue) {
-      input.value = initialValue;
+  for(const art of doc.querySelectorAll('PubmedArticle')){
+    const title = txt(art, 'ArticleTitle');
+    const journal = txt(art, 'ISOAbbreviation');
+    const year = txt(art, 'PubDate Year') || txt(art, 'PubMedPubDate[PubStatus="entrez"] Year');
+    for(const au of art.querySelectorAll('Author')){
+      const last = txt(au, 'LastName');
+      if(last.toLowerCase() !== surname) continue;
+      const fore = txt(au, 'ForeName');
+      const orcid = (txt(au, 'Identifier[Source="ORCID"]') || '')
+        .replace(/^https?:\/\/orcid\.org\//, '').trim();
+      const aff = txt(au, 'Affiliation');
+      /* Group on ORCID when PubMed has one. Otherwise group on the first
+         affiliation clause, which is the best available proxy for one person. */
+      const key = ORCID_RE.test(orcid) ? orcid : 'aff:' + (aff.split(/[,;]/)[0] || fore || last).toLowerCase();
+      if(!groups.has(key)) groups.set(key, { orcid:ORCID_RE.test(orcid)?orcid:'', name:`${last} ${fore.split(' ').map(w=>w[0]||'').join('')}`.trim(),
+                                             full:`${fore} ${last}`.trim(), aff:'', papers:[] });
+      const g = groups.get(key);
+      if(aff && !g.aff) g.aff = aff;
+      if(g.papers.length < 3 && title) g.papers.push({ title, journal, year });
+      g.n = (g.n || 0) + 1;
     }
   }
+  return [...groups.values()].sort((a,b) => b.n - a.n).slice(0, 6);
+}
 
-  function validateOrcidRow(row, showError) {
-    const input = row.querySelector("input");
-    const error = row.querySelector(".error-text");
-    const value = input.value.trim();
+function renderCandidates(list, name){
+  const ul = $('cands');
+  if(!list.length){ ul.innerHTML = ''; return; }
+  ul.innerHTML = list.map((c,i) => `
+    <li class="cand">
+      <p class="who">${esc(c.full || c.name)}</p>
+      ${c.orcid ? `<p class="orcid">ORCID ${esc(c.orcid)}</p>` : ''}
+      ${c.aff ? `<p class="aff">${esc(c.aff.slice(0,140))}</p>` : '<p class="aff">No affiliation listed on these records.</p>'}
+      <ul class="titles">${c.papers.map(p => `<li>${esc(p.title.slice(0,110))} <span class="j">${esc(p.journal)}${p.year?' '+esc(p.year):''}</span></li>`).join('')}</ul>
+      <button class="tiny" type="button" data-pick="${i}">Follow this person</button>
+      ${c.orcid ? '' : '<span class="orcid" style="margin-left:8px">Name match only, may include others</span>'}
+    </li>`).join('');
+  ul.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => addAuthor(list[+b.dataset.pick]));
+}
 
-    if (!value) {
-      input.removeAttribute("aria-invalid");
-      error.textContent = "";
-      return true;
-    }
-    if (ORCID_RE.test(value)) {
-      input.removeAttribute("aria-invalid");
-      error.textContent = "";
-      return true;
-    }
-    if (showError) {
-      input.setAttribute("aria-invalid", "true");
-      error.textContent = "Enter a valid ORCID iD in the form 0000-0000-0000-0000.";
-    }
-    return false;
-  }
+async function addAuthor(c){
+  if(state.authors.some(a => (a.orcid && a.orcid === c.orcid) || a.name === c.name)) return;
+  const entry = { orcid:c.orcid, name:c.orcid ? (c.full || c.name) : c.name, lastYear:null };
+  state.authors.push(entry);
+  $('cands').innerHTML = ''; $('authorq').value = '';
+  say($('authorStatus'), `Following ${entry.name}.`, 'ok');
+  renderAuthors(); refresh();
+  try{
+    const yr = new Date().getFullYear();
+    entry.lastYear = await count(`${authorClause(entry)} AND ${yr-1}:${yr}[dp]`);
+    renderAuthors();
+  }catch{ /* count is a nicety, never block on it */ }
+}
 
-  addOrcidBtn.addEventListener("click", function () {
-    addOrcidRow();
-    const rows = orcidRows.querySelectorAll(".orcid-row input");
-    if (rows.length) rows[rows.length - 1].focus();
+function renderAuthors(){
+  $('authorChips').hidden = state.authors.length === 0;
+  $('authorList').innerHTML = state.authors.map((a,i) => `
+    <li class="chip">
+      <span>${esc(a.name)} ${a.orcid ? `<span class="orcid">${esc(a.orcid)}</span>` : '<span class="orcid">name match</span>'}</span>
+      <span><span class="meta">${a.lastYear === null ? '…' : a.lastYear + ' since ' + (new Date().getFullYear()-1)}</span>
+      <button type="button" aria-label="Stop following ${esc(a.name)}" data-rm="${i}">&times;</button></span>
+    </li>`).join('');
+  $('authorList').querySelectorAll('[data-rm]').forEach(b => b.onclick = () => {
+    state.authors.splice(+b.dataset.rm, 1); renderAuthors(); refresh();
   });
+}
 
-  // Start with one empty row so the section isn't visually blank.
-  addOrcidRow();
-
-  function setFieldError(fieldEl, errorEl, message) {
-    errorEl.textContent = message || "";
-    if (message) {
-      fieldEl.classList.add("field-error");
-    } else {
-      fieldEl.classList.remove("field-error");
-    }
-  }
-
-  function showBanner(kind, message) {
-    statusRegion.innerHTML = "";
-    const banner = document.createElement("div");
-    banner.className = "status-banner " + kind;
-    banner.setAttribute("role", kind === "error" ? "alert" : "status");
-    banner.textContent = message;
-    statusRegion.appendChild(banner);
-  }
-
-  function clearBanner() {
-    statusRegion.innerHTML = "";
-  }
-
-  function validateForm() {
-    let firstInvalid = null;
-    let valid = true;
-
-    // Email
-    const emailInput = document.getElementById("email");
-    const emailField = emailInput.closest(".field");
-    const emailError = document.getElementById("email-error");
-    if (!emailInput.value.trim() || !emailInput.validity.valid) {
-      setFieldError(emailField, emailError, "Enter a valid email address.");
-      valid = false;
-      firstInvalid = firstInvalid || emailInput;
-    } else {
-      setFieldError(emailField, emailError, "");
-    }
-
-    // Templates: at least one
-    const templateBoxes = form.querySelectorAll('input[name="templates"]:checked');
-    const templatesError = document.getElementById("templates-error");
-    if (templateBoxes.length === 0) {
-      templatesError.textContent = "Choose at least one specialty template.";
-      valid = false;
-      firstInvalid = firstInvalid || form.querySelector('input[name="templates"]');
-    } else {
-      templatesError.textContent = "";
-    }
-
-    // ORCID rows: each non-empty row must be valid
-    const rows = orcidRows.querySelectorAll(".orcid-row");
-    rows.forEach(function (row) {
-      const ok = validateOrcidRow(row, true);
-      if (!ok && !firstInvalid) {
-        firstInvalid = row.querySelector("input");
-      }
-      if (!ok) valid = false;
-    });
-
-    if (firstInvalid) firstInvalid.focus();
-    return valid;
-  }
-
-  function collectPayload() {
-    const email = document.getElementById("email").value.trim();
-    const cadence = form.querySelector('input[name="cadence"]:checked').value;
-    const templates = Array.from(form.querySelectorAll('input[name="templates"]:checked')).map(function (el) {
-      return el.value;
-    });
-    const journalTierEl = form.querySelector('input[name="journalTier"]:checked');
-    const journalTier = journalTierEl ? journalTierEl.value : "tier12";
-    const pubTypes = Array.from(form.querySelectorAll('input[name="pubTypes"]:checked')).map(function (el) {
-      return el.value;
-    });
-    const extraKeywordsRaw = document.getElementById("extra-keywords").value.trim();
-    const extraKeywords = extraKeywordsRaw
-      ? extraKeywordsRaw.split(",").map(function (s) { return s.trim(); }).filter(Boolean)
-      : [];
-    const orcids = Array.from(orcidRows.querySelectorAll(".orcid-row input"))
-      .map(function (el) { return el.value.trim(); })
-      .filter(Boolean);
-
-    return {
-      email: email,
-      cadence: cadence,
-      templates: templates,
-      advanced: {
-        journalTier: journalTier,
-        publicationTypes: pubTypes,
-        extraKeywords: extraKeywords
-      },
-      orcidWatchlist: orcids
-    };
-  }
-
-  function showSuccess(heading, message) {
-    form.hidden = true;
-    clearBanner();
-    successHeading.textContent = heading;
-    successMessage.textContent = message;
-    successPanel.hidden = false;
-    successPanel.setAttribute("tabindex", "-1");
-    successPanel.focus();
-  }
-
-  // Turns collectPayload()'s output into a prefilled GitHub Issue Form URL.
-  // Every key set here must be a field `id` in .github/ISSUE_TEMPLATE/subscribe.yml.
-  //
-  // Reliability, checked against GitHub's own docs and community reports
-  // (2026-09-05): a plain `input`/`textarea` field's `id` is documented as
-  // "the canonical identifier for the field in URL query parameter
-  // prefills" (docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema#keys)
-  // and this is confirmed working in practice. `dropdown` and `checkboxes`
-  // fields are NOT documented for query-param prefill, and GitHub's own
-  // community discussion (github.com/orgs/community/discussions/15477)
-  // reports dropdown prefill "currently doesn't" work and checkbox prefill
-  // as unreliable/unsupported. cadence, templates, journal-tier and
-  // pub-types are exactly those field types here, so this still sets them
-  // (a comma-joined list of the matching option text, the same convention
-  // GitHub's own documented `labels` query parameter uses) as a harmless
-  // best-effort attempt, but does not rely on it — see the "double-check"
-  // wording in submitViaGithub()'s success message below. email,
-  // extra-keywords, and orcid-list (input/textarea fields) are the ones
-  // actually guaranteed to carry over.
-  function buildGithubIssueUrl(payload) {
-    const params = new URLSearchParams();
-    params.set("template", GITHUB_ISSUE_TEMPLATE);
-    params.set("labels", "subscription");
-    params.set("email", payload.email);
-    params.set("cadence", payload.cadence);
-    if (payload.templates.length) params.set("templates", payload.templates.join(","));
-    params.set("journal-tier", payload.advanced.journalTier);
-    if (payload.advanced.publicationTypes.length) {
-      params.set("pub-types", payload.advanced.publicationTypes.join(","));
-    }
-    if (payload.advanced.extraKeywords.length) {
-      params.set("extra-keywords", payload.advanced.extraKeywords.join(", "));
-    }
-    if (payload.orcidWatchlist.length) {
-      params.set("orcid-list", payload.orcidWatchlist.join("\n"));
-    }
-    return "https://github.com/" + GITHUB_REPO + "/issues/new?" + params.toString();
-  }
-
-  function submitViaGithub(payload) {
-    const url = buildGithubIssueUrl(payload);
-    // window.open (not location.href) so the signup page stays open behind
-    // the new tab. Called synchronously from the submit handler, with no
-    // await/then in between, so browsers still treat it as a user-gesture-
-    // triggered open and don't block it as a popup; the `|| ` fallback below
-    // only matters for a browser that blocks it anyway.
-    const opened = window.open(url, "_blank", "noopener");
-    if (!opened) {
-      location.href = url;
+/* ---------------- journals ---------------- */
+async function addJournal(nameRaw){
+  const name = nameRaw.trim();
+  if(!name) return;
+  if(state.journals.some(j => j.name.toLowerCase() === name.toLowerCase())) return;
+  say($('journalStatus'), `Checking ${name} on PubMed…`);
+  let n30;
+  try{ n30 = await count(`"${name}"[ta]`, 30); }
+  catch(e){ say($('journalStatus'), 'Could not reach PubMed. Check your connection and try again.', 'err'); return; }
+  if(n30 === 0){
+    const ever = await count(`"${name}"[ta]`).catch(() => 0);
+    if(ever === 0){
+      say($('journalStatus'), `PubMed has no journal indexed as "${name}". Try its NLM abbreviation, for example "Pediatr Crit Care Med".`, 'err');
       return;
     }
-    showSuccess(
-      "Almost there — finish on GitHub",
-      "A prefilled subscription request just opened in a new tab for " + payload.email +
-        ". Double-check the selections carried over correctly, then click “Submit new " +
-        "issue.” Your subscription starts once that issue is processed (it will be closed " +
-        "and locked automatically either way, so your email address doesn't stay visible there)."
-    );
   }
+  state.journals.push({ name, n30 });
+  say($('journalStatus'), `Added ${name}.`, 'ok');
+  $('journalq').value = '';
+  renderJournals(); refresh();
+}
 
-  function submitViaApi(payload) {
-    submitBtn.disabled = true;
-    submitBtn.setAttribute("aria-busy", "true");
-    const originalLabel = submitBtn.textContent;
-    submitBtn.textContent = "Submitting…";
-
-    fetch(API_BASE + "/subscribe", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    })
-      .then(function (res) {
-        if (res.ok) {
-          showSuccess(
-            "Check your inbox",
-            "We've sent a confirmation link to " + payload.email + ". Click it to activate your digest — subscriptions aren't active until confirmed."
-          );
-          return null;
-        }
-        return res
-          .json()
-          .catch(function () { return null; })
-          .then(function (body) {
-            const msg = (body && (body.message || body.error)) || ("Something went wrong (HTTP " + res.status + ").");
-            const httpErr = new Error(msg);
-            httpErr.isHttpError = true; // came from a real server response, safe to show verbatim
-            throw httpErr;
-          });
-      })
-      .catch(function (err) {
-        // Only surface the server's own message when we actually got a response.
-        // A network/CORS/DNS failure throws a generic TypeError ("Failed to fetch" or
-        // similar, wording varies by browser) — show one consistent message for that instead.
-        const message = err && err.isHttpError && err.message
-          ? err.message
-          : "Could not reach the server. Check your connection and try again.";
-        showBanner("error", message);
-      })
-      .finally(function () {
-        submitBtn.disabled = false;
-        submitBtn.removeAttribute("aria-busy");
-        submitBtn.textContent = originalLabel;
-      });
-  }
-
-  form.addEventListener("submit", function (evt) {
-    evt.preventDefault();
-    clearBanner();
-
-    if (!validateForm()) {
-      showBanner("error", "Please fix the highlighted fields before submitting.");
-      return;
-    }
-
-    const payload = collectPayload();
-
-    if (SIGNUP_MODE === "github") {
-      submitViaGithub(payload);
-    } else {
-      submitViaApi(payload);
-    }
+function renderJournals(){
+  $('journalList').innerHTML = state.journals.map((j,i) => `
+    <li class="chip">
+      <span>${esc(j.name)}</span>
+      <span><span class="meta">${j.n30} in 30 days</span>
+      <button type="button" aria-label="Remove ${esc(j.name)}" data-rm="${i}">&times;</button></span>
+    </li>`).join('');
+  $('journalList').querySelectorAll('[data-rm]').forEach(b => b.onclick = () => {
+    const gone = state.journals.splice(+b.dataset.rm, 1)[0];
+    const box = document.querySelector(`#curated input[value="${CSS.escape(gone.name)}"]`);
+    if(box) box.checked = false;
+    renderJournals(); refresh();
   });
+}
+
+/* ---------------- live readout ---------------- */
+let refreshToken = 0;
+
+async function refresh(){
+  const my = ++refreshToken;
+  const q = buildQuery();
+  const cadence = state.cadence;
+  $('cadenceEcho').textContent = cadence;
+
+  if(!q){
+    $('queryOut').textContent = 'Nothing selected yet.';
+    $('volN').textContent = '0';
+    $('volNote').textContent = 'Add an author or a journal to see an estimate.';
+    $('mailNote').textContent = '';
+    $('gauge').style.width = '0';
+    $('openBtn').disabled = true;
+    $('sampleList').innerHTML = '<li class="empty" style="list-style:none;margin-left:-16px">Your most recent matches appear here once you pick something.</li>';
+    $('sampleSubj').textContent = 'PubMed alert';
+    return;
+  }
+
+  const alerts = state.split === 'split' ? buildSplitQueries() : [{ label:'combined', q }];
+  $('queryOut').textContent = state.split === 'split'
+    ? alerts.map(a => `# ${a.label}\n${a.q}`).join('\n\n')
+    : q;
+  $('openBtn').disabled = false;
+  $('sampleSubj').textContent = state.authors.length || state.journals.length
+    ? `PubMed: ${[...state.authors.map(a=>a.name), ...state.journals.map(j=>j.name)].slice(0,2).join(', ')}${alerts.length>1||state.authors.length+state.journals.length>2?' and more':''}`
+    : 'PubMed alert';
+
+  $('volNote').textContent = 'Counting on PubMed…';
+  try{
+    const n30 = await count(q, 30);
+    if(my !== refreshToken) return;                 // a newer edit landed
+    const per = cadence === 'weekly' ? Math.round(n30 / 4.3) : n30;
+    $('volN').textContent = per;
+    $('volU').textContent = per === 1 ? 'paper per email' : 'papers per email';
+    $('gauge').style.width = Math.min(100, (per / 40) * 100) + '%';
+    $('volNote').textContent = `${n30} matched the last 30 days. ${
+      cadence === 'weekly' ? 'Weekly works out to about ' + per + ' each time.' : 'A monthly alert sends them together.'}`;
+    const emails = state.split === 'split' ? alerts.length : 1;
+    const perMonth = cadence === 'weekly' ? 4.3 : 1;
+    $('mailNote').textContent = `${emails} alert${emails===1?'':'s'} to set up, about ${Math.round(emails*perMonth)} email${Math.round(emails*perMonth)===1?'':'s'} a month.` +
+      (emails > 1 ? ' Combining them into one alert would make that a single email.' : '');
+    loadSample(q, my);
+  }catch(e){
+    if(my !== refreshToken) return;
+    $('volNote').textContent = 'Could not reach PubMed for a count. The query above is still correct.';
+  }
+}
+
+async function loadSample(q, my){
+  try{
+    const ids = await eutils('esearch.fcgi', { term:q, retmax:4, retmode:'json', sort:'date' })
+      .then(j => j.esearchresult.idlist || []);
+    if(my !== refreshToken || !ids.length) return;
+    const doc = xml(await eutils('efetch.fcgi', { id:ids.join(','), retmode:'xml' }));
+    if(my !== refreshToken) return;
+    const rows = [...doc.querySelectorAll('PubmedArticle')].map(a => ({
+      t: txt(a, 'ArticleTitle'), j: txt(a, 'ISOAbbreviation')
+    })).filter(r => r.t);
+    $('sampleList').innerHTML = rows.map(r =>
+      `<li>${esc(r.t.slice(0,120))} <span class="j">${esc(r.j)}</span></li>`).join('')
+      || '<li class="empty">No recent matches.</li>';
+  }catch{ /* the sample is illustrative; its failure must not break the page */ }
+}
+
+/* ---------------- wiring ---------------- */
+$('curated').innerHTML = CURATED.map(j =>
+  `<label class="choice"><input type="checkbox" value="${esc(j)}"><span>${esc(j)}</span></label>`).join('');
+$('curated').addEventListener('change', e => {
+  const name = e.target.value;
+  if(e.target.checked) addJournal(name);
+  else {
+    const i = state.journals.findIndex(j => j.name === name);
+    if(i > -1){ state.journals.splice(i,1); renderJournals(); refresh(); }
+  }
+});
+
+$('ptypes').innerHTML = PTYPES.map(([v,l]) =>
+  `<label class="choice"><input type="checkbox" value="${esc(v)}"><span>${esc(l)}</span></label>`).join('');
+$('ptypes').addEventListener('change', () => {
+  state.ptypes = [...$('ptypes').querySelectorAll('input:checked')].map(i => i.value);
+  refresh();
+});
+
+document.querySelectorAll('input[name=cadence]').forEach(r => r.addEventListener('change', e => {
+  state.cadence = e.target.value; refresh();
+}));
+document.querySelectorAll('input[name=split]').forEach(r => r.addEventListener('change', e => {
+  state.split = e.target.value; refresh();
+}));
+
+async function doSearch(){
+  const name = $('authorq').value.trim();
+  if(name.length < 2){ say($('authorStatus'), 'Enter a surname, for example "Barbaro R".', 'err'); return; }
+  $('searchBtn').disabled = true;
+  say($('authorStatus'), 'Searching PubMed…');
+  try{
+    const list = await searchAuthors(name);
+    if(!list.length) say($('authorStatus'), `No recent papers found for "${name}". Try surname plus initial.`, 'err');
+    else say($('authorStatus'), `${list.length} possible ${list.length===1?'person':'people'} matched. Pick the right one.`);
+    renderCandidates(list, name);
+  }catch(e){
+    say($('authorStatus'), 'Could not reach PubMed. Check your connection and try again.', 'err');
+  }finally{ $('searchBtn').disabled = false; }
+}
+$('searchBtn').onclick = doSearch;
+$('authorq').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); doSearch(); }});
+$('addJournal').onclick = () => addJournal($('journalq').value);
+$('journalq').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); addJournal($('journalq').value); }});
+
+$('copyBtn').onclick = async () => {
+  const text = $('queryOut').textContent;
+  try{ await navigator.clipboard.writeText(text); say($('copyStatus'), 'Copied.', 'ok'); }
+  catch{ say($('copyStatus'), 'Copy blocked by the browser. Select the text above instead.', 'err'); }
+  setTimeout(() => say($('copyStatus'), ''), 2600);
+};
+
+$('openBtn').onclick = () => {
+  const alerts = state.split === 'split' ? buildSplitQueries() : [{ q:buildQuery() }];
+  window.open(pubmedUrl(alerts[0].q), '_blank', 'noopener');
+  say($('openStatus'), alerts.length > 1
+    ? `Opened the first of ${alerts.length}. Create that alert, then come back for the rest.`
+    : 'Opened on PubMed. Sign in, then click Create alert under the search box.', 'ok');
+};
+
+refresh();
 })();
 </script>
 </body>
