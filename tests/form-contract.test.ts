@@ -133,3 +133,26 @@ test('every interactive control is reachable and labelled', () => {
   }
   assert.ok(/:focus-visible/.test(page), 'no visible focus style');
 });
+
+test('author names are never quoted in an [au] clause', () => {
+  // Measured 2026-09-06 against live PubMed: quoting forces exact phrase matching
+  // on the author index and silently drops records indexed under a fuller name.
+  //   Kolmar A[au]  -> 17     "Kolmar A"[au]  -> 10
+  //   Barbaro R[au] -> 155    "Barbaro R"[au] -> 43   (72% loss)
+  //   Shah N[au]    -> 9846   "Shah N"[au]    -> 4402
+  // Journals [ta] and publication types [pt] return identical counts either way,
+  // so they keep their quotes; only [au] must stay bare.
+  // Strip comments first: the explanation of this rule quotes the bad form, and
+  // an earlier version of this test flagged that documentation as a violation.
+  const code = page.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const quotedAu = code.match(/"\$\{[^}]*\}"\[au\]|"[^"]*"\[au\]/g) || [];
+  assert.deepStrictEqual(quotedAu, [],
+    `author clauses are quoted, which silently loses matches: ${quotedAu.join(', ')}`);
+  assert.ok(/\[au\]/.test(code), 'expected at least one [au] clause to exist');
+});
+
+test('journal clauses keep their quotes', () => {
+  // Multi-word journal titles need the phrase form, and quoting costs nothing there.
+  assert.ok(/"\$\{[^}]*\}"\[ta\]|"[^"]*"\[ta\]/.test(page),
+    'journal clauses should be quoted');
+});

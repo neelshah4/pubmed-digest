@@ -211,15 +211,16 @@ footer a{color:var(--slate); text-decoration:underline; text-underline-offset:2p
       <section class="card">
         <span class="label">Step one</span><hr class="hr">
         <h2>Follow specific people</h2>
-        <p class="hint">Search a name, then pick the right person. PubMed does not group authors, so several researchers can share a name and initial. Each result shows recent titles and an affiliation so you can tell them apart.</p>
+        <p class="hint">Type it however you write it. <b>Kolmar A</b>, <b>Amanda Kolmar</b> and <b>Kolmar, A</b> all work; the surname is worked out from the results rather than from word order. Adding an institution narrows a common name a great deal.</p>
+        <p class="hint">PubMed does not group authors, so one person can appear as several results when their affiliation changed or their middle initial comes and goes. If the results below are all the same person, say so and they will be followed as one.</p>
         <div class="row">
           <div>
             <label class="field" for="authorq">Author name</label>
-            <input type="search" id="authorq" value="Shah N" placeholder="Barbaro R" autocomplete="off" spellcheck="false">
+            <input type="search" id="authorq" value="Shah N" placeholder="Surname and initial, or a full name" autocomplete="off" spellcheck="false">
           </div>
           <div>
             <label class="field" for="affq">Institution <span style="font-weight:400;color:var(--ink-quiet)">(optional)</span></label>
-            <input type="search" id="affq" value="Washington University" placeholder="University of Michigan" autocomplete="off" spellcheck="false">
+            <input type="search" id="affq" value="Washington University" placeholder="Institution name" autocomplete="off" spellcheck="false">
           </div>
           <button id="searchBtn" type="button">Search</button>
         </div>
@@ -420,9 +421,19 @@ const PTYPES = [
    distinguished this person in the picker, so it has to travel into the query
    too. Dropping it would make the disambiguation UI decorative: the user picks
    the right Neel Shah and the alert still returns every N Shah in PubMed. */
+/* Author names go into [au] UNQUOTED. Measured 2026-09-06: quoting forces exact
+   phrase matching on the author index and silently discards records indexed
+   under a fuller form. Kolmar A[au] returns 17 and "Kolmar A"[au] returns 10;
+   Barbaro R[au] returns 155 and "Barbaro R"[au] returns 43, a 72% loss. Journals
+   [ta] and publication types [pt] are unaffected by quoting and keep theirs. */
 function authorClause(a){
+  if(a.combined){
+    const parts = a.combined.orcids.map(o => `${o}[auid]`);
+    if(a.combined.nameTerm) parts.push(`${a.combined.nameTerm}[au]`);
+    return orGroup(parts);
+  }
   if(a.orcid) return `${a.orcid}[auid]`;
-  return a.aff ? `("${a.name}"[au] AND "${a.aff}"[ad])` : `"${a.name}"[au]`;
+  return a.aff ? `(${a.name}[au] AND "${a.aff}"[ad])` : `${a.name}[au]`;
 }
 function orGroup(parts){ return parts.length > 1 ? '(' + parts.join(' OR ') + ')' : parts[0]; }
 
@@ -469,7 +480,17 @@ async function searchAuthors(name, aff){
   if(!ids.length) return [];
 
   const doc = xml(await eutils('efetch.fcgi', { id:ids.join(','), retmode:'xml' }));
-  const surname = name.trim().split(/[\s,]+/)[0].toLowerCase();
+  /* Which word is the surname? Taking the first token assumed "Kolmar A" order
+     and broke on "Amanda Kolmar", searching for people surnamed Amanda. PubMed
+     accepts either order, so the surname is whichever query token actually turns
+     up as a LastName in the records that came back. */
+  const tokens = name.toLowerCase().split(/[\s,.]+/).filter(t => t.length > 1);
+  const lastNameHits = new Map();
+  for(const m of doc.querySelectorAll('LastName')){
+    const v = (m.textContent || '').toLowerCase();
+    if(tokens.includes(v)) lastNameHits.set(v, (lastNameHits.get(v) || 0) + 1);
+  }
+  const surname = [...lastNameHits.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || tokens[0];
   const groups = new Map();
 
   for(const art of doc.querySelectorAll('PubmedArticle')){
@@ -485,22 +506,44 @@ async function searchAuthors(name, aff){
       const aff = txt(au, 'Affiliation');
       /* Group on ORCID when PubMed has one. Otherwise group on the first
          affiliation clause, which is the best available proxy for one person. */
-      const key = ORCID_RE.test(orcid) ? orcid : 'aff:' + (aff.split(/[,;]/)[0] || fore || last).toLowerCase();
+      const initial = (fore[0] || '').toLowerCase();
+      const inst = institutionKey(aff);
+      const key = ORCID_RE.test(orcid) ? orcid : `n:${initial}|${inst}`;
       if(!groups.has(key)) groups.set(key, { orcid:ORCID_RE.test(orcid)?orcid:'', name:`${last} ${fore.split(' ').map(w=>w[0]||'').join('')}`.trim(),
-                                             full:`${fore} ${last}`.trim(), aff:'', papers:[] });
+                                             full:`${fore} ${last}`.trim(), aff:'', inst, initial, papers:[], orcids:new Set() });
       const g = groups.get(key);
+      if(ORCID_RE.test(orcid)) g.orcids.add(orcid);
       if(aff && !g.aff) g.aff = aff;
       if(g.papers.length < 3 && title) g.papers.push({ title, journal, year });
       g.n = (g.n || 0) + 1;
     }
   }
-  return [...groups.values()].sort((a,b) => b.n - a.n).slice(0, 6);
+  /* An author whose ORCID reached PubMed on only some papers otherwise appears
+     twice: once under the ORCID and once under the name. Fold the nameless one
+     in when the initial and institution agree. */
+  const all = [...groups.values()];
+  const withOrcid = all.filter(g => g.orcid);
+  const merged = [];
+  for(const g of all){
+    if(g.orcid){ merged.push(g); continue; }
+    const owner = withOrcid.find(o => o.initial === g.initial && o.inst && o.inst === g.inst);
+    if(owner){ owner.n += g.n; if(owner.papers.length < 3) owner.papers.push(...g.papers.slice(0, 3 - owner.papers.length)); }
+    else merged.push(g);
+  }
+  searchAuthors.surname = surname;
+  return merged.sort((a,b) => b.n - a.n).slice(0, 8);
 }
 
 function renderCandidates(list, name){
   const ul = $('cands');
   if(!list.length){ ul.innerHTML = ''; return; }
-  ul.innerHTML = list.map((c,i) => `
+  const multi = list.length > 1;
+  ul.innerHTML = (multi ? `
+    <li class="cand" style="border-left-color:var(--slate)">
+      <p class="who">Are these all the same person?</p>
+      <p class="aff">One researcher often appears more than once here: an affiliation changes, a middle initial comes and goes, or an ORCID reached PubMed on only some papers. Combining follows every version as a single author.</p>
+      <button class="tiny" type="button" id="combineAll">Combine all ${list.length} into one</button>
+    </li>` : '') + list.map((c,i) => `
     <li class="cand">
       <p class="who">${esc(c.full || c.name)}</p>
       ${c.orcid ? `<p class="orcid">ORCID ${esc(c.orcid)}</p>` : ''}
@@ -510,16 +553,98 @@ function renderCandidates(list, name){
       ${c.orcid ? '' : '<span class="orcid" style="margin-left:8px">Name match only, may include others</span>'}
     </li>`).join('');
   ul.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => addAuthor(list[+b.dataset.pick]));
+  const combineBtn = document.getElementById('combineAll');
+  if(combineBtn) combineBtn.onclick = () => combineAll(list);
 }
 
 /* The narrowest useful piece of an affiliation string: "Department of
    Pediatrics, Washington University in St. Louis, MO." -> "Washington University
    in St. Louis". The department is too generic and the city too broad. */
+/* Reduce an affiliation string to the institution, dropping the department.
+   Grouping on the raw first clause split one person into ten candidates, because
+   that clause is usually "Department of Pediatrics" and varies paper to paper. */
+/* "washington university" -> "Washington University", for use in a query. */
+function titleCase(s){
+  return s.replace(/\b[a-z]/g, ch => ch.toUpperCase()).trim();
+}
+
+function institutionKey(aff){
+  if(!aff) return '';
+  const clause = (aff.split(/[,;]/).map(x => x.trim())
+    .find(x => /universit|hospital|college|institut|school of medicine|centre|center|clinic/i.test(x)) || '');
+  return clause.toLowerCase()
+    .replace(/\b(school of medicine|medical (school|center|centre)|health (system|sciences)|in st\.? louis|at [a-z ]+)\b/g, '')
+    .replace(/['\u2019]/g, '')          // Children's -> Childrens, not "Children S"
+    .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
 function firstAffiliationClause(aff){
   if(!aff) return '';
   const parts = aff.split(/[,;]/).map(x => x.trim()).filter(Boolean);
   const inst = parts.find(x => /universit|hospital|college|institut|school|centre|center|clinic/i.test(x));
   return (inst || parts[0] || '').replace(/["\\]/g, '').slice(0, 70);
+}
+
+/* Follows every candidate as one author. The query unions each ORCID found with
+   the name scoped to each institution seen, so a person who moved, or whose
+   ORCID only reached some papers, is covered once rather than as several
+   near-duplicate entries the user has to add one by one. */
+/* Measured 2026-09-06, and it changed this design: PubMed's affiliation index
+   does not reliably cover non-first authors. Three of Amanda Kolmar's 2023-24
+   papers carry "Washington University in St. Louis" in the record and still do
+   not match washington[ad] AND university[ad]. Scoping a combined author by
+   affiliation therefore drops real work silently, which is the failure mode this
+   whole tool exists to avoid. The user has just asserted these are one person,
+   so the combined query unions every ORCID with the bare name and says plainly
+   that namesakes may come with it. Affiliation stays where it is reliable: in
+   the picker, helping a human tell people apart. */
+function combineAll(list){
+  const orcids = [...new Set(list.map(c => c.orcid).filter(Boolean))];
+  /* Use the NORMALISED institution, not the literal clause. One author writes
+     "Washington University School of Medicine", "Washington University in St.
+     Louis" and "Washington University in St Louis" across her own papers; the
+     literal strings do not match each other in [ad], so scoping on them dropped
+     four of her seventeen records. The normalised form matches all three. */
+  const insts = [...new Set(list.map(c => titleCase(institutionKey(c.aff))).filter(Boolean))];
+  const surname = searchAuthors.surname || '';
+  const initial = (list.find(c => c.full)?.full || '').trim().charAt(0);
+  const nameTerm = surname ? `${surname.charAt(0).toUpperCase()}${surname.slice(1)} ${initial}`.trim() : '';
+  const entry = {
+    orcid: '',
+    name: list[0].full || nameTerm || 'combined author',
+    combined: { orcids, insts, nameTerm },
+    aff: '',
+    lastYear: null,
+  };
+  if(state.authors.some(a => a.combined && a.name === entry.name)) return;
+  state.authors.push(entry);
+  $('cands').innerHTML = '';
+  say($('authorStatus'), `Following ${entry.name} as one author across ${list.length} PubMed variants.`, 'ok');
+  renderAuthors(); refresh();
+  countCombined(entry, list);
+}
+
+async function countCombined(entry, list){
+  try{
+    entry.total = await count(authorClause(entry));
+    entry.lastYear = entry.total;
+    renderAuthors();
+    /* Show what the narrower, institution-scoped form would have cost, so the
+       broader choice is visible rather than silent. */
+    if(entry.combined.insts.length && entry.combined.nameTerm){
+      const narrow = orGroup([
+        ...entry.combined.orcids.map(o => `${o}[auid]`),
+        `(${entry.combined.nameTerm}[au] AND ${orGroup(entry.combined.insts.map(i => `"${i}"[ad]`))})`,
+      ]);
+      const n = await count(narrow);
+      if(n < entry.total){
+        say($('authorStatus'),
+          `Following ${entry.name} as one author: ${entry.total} records. Narrowing by institution would give ${n}, ` +
+          `because PubMed's affiliation index does not cover every author on a paper. The broader form is used, ` +
+          `so a namesake may occasionally appear.`);
+      }
+    }
+  }catch{ /* the count is a nicety */ }
 }
 
 async function addAuthor(c){
@@ -547,7 +672,9 @@ function renderAuthors(){
     <li class="chip">
       <span>${esc(a.name)} ${a.orcid
         ? `<span class="orcid">${esc(a.orcid)}</span>`
-        : `<span class="orcid">${a.aff ? 'at ' + esc(a.aff) : 'name match only'}</span>`}</span>
+        : a.combined
+          ? `<span class="orcid">${a.combined.orcids.length ? a.combined.orcids.length + ' ORCID + ' : ''}${a.combined.insts.length || 1} affiliation${(a.combined.insts.length||1)===1?'':'s'}, combined</span>`
+          : `<span class="orcid">${a.aff ? 'at ' + esc(a.aff) : 'name match only'}</span>`}</span>
       <span><span class="meta">${a.total !== undefined ? a.total + ' total' :
         (a.lastYear === null ? '…' : a.lastYear + ' since ' + (new Date().getFullYear()-1))}</span>
       <button type="button" aria-label="Stop following ${esc(a.name)}" data-rm="${i}">&times;</button></span>
