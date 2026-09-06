@@ -66,7 +66,7 @@ const say = (cls, msg) => { const s = $('status'); s.className = 'status ' + cls
 const TAGS = {
   star:  { title: 'Marked as useful',  lede: 'More like this will rank higher in next week’s digest.' },
   tilde: { title: 'Noted as borderline', lede: 'This nudges the ranking gently, not decisively.' },
-  skip:  { title: 'Got it — less like this', lede: 'Similar papers will be pushed down in future digests.' },
+  skip:  { title: 'Noted, less like this', lede: 'Similar papers will be pushed down in future digests.' },
 };
 
 function invalid(msg) {
@@ -109,7 +109,7 @@ async function post(path, body) {
     // clicking from an email has no session, so a plain table insert would be
     // refused by row-level security.
     if (await post('rpc/record_feedback', { p_user: user, p_token: token, p_pmid: pmid, p_tag: tag }))
-      say('ok', 'Saved. Thanks — that genuinely changes what you get.');
+      say('ok', 'Saved. That genuinely changes what you get.');
 
   } else if (action === 'unsubscribe') {
     if (!user || !token) return invalid('That unsubscribe link is missing its token.');
