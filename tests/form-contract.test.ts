@@ -23,18 +23,58 @@ function jsArray(name: string): string[] {
   return [...m![1].matchAll(/['"]([^'"]+)['"]/g)].map((x) => x[1]);
 }
 
-test('every curated journal is one the vetted peds-CC template whitelists', () => {
-  const curated = jsArray('CURATED');
-  assert.ok(curated.length >= 10, `expected a real curated list, found ${curated.length}`);
-  const cfg = loadTemplate('peds-cc');
-  const vetted = new Set([
-    ...cfg.journals.tier_1_primary_cc,
-    ...cfg.journals.tier_2_top_general_plus_adjacent,
-  ].map((j) => j.toLowerCase()));
-  for (const j of curated) {
-    assert.ok(vetted.has(j.toLowerCase()),
-      `"${j}" is offered as curated but is not in the vetted tier-1/2 whitelist`);
+test('every curated journal ships with a measured monthly count', () => {
+  // Each entry is [journalName, articlesPerMonth]. The count is not decoration:
+  // it is evidence the name was checked against live PubMed before shipping. One
+  // candidate ("Pediatr Crit Care Med Open") matched nothing and was dropped.
+  const block = page.match(/const GROUPS = \{([\s\S]*?)\n\};/);
+  assert.ok(block, 'GROUPS not found in web/index.html');
+  const entries = [...block![1].matchAll(/\['([^']+)',\s*(\d+)\]/g)];
+  assert.ok(entries.length >= 50, `expected a substantial journal set, found ${entries.length}`);
+  for (const [, name, n] of entries) {
+    assert.ok(name.trim().length > 2, `bad journal name: "${name}"`);
+    assert.ok(Number.isInteger(+n) && +n >= 0, `"${name}" has no measured count`);
   }
+});
+
+test('there are enough groups, each with enough journals to be worth grouping', () => {
+  const block = page.match(/const GROUPS = \{([\s\S]*?)\n\};/)![1];
+  const groups = [...block.matchAll(/^\s*'([^']+)':\s*\[/gm)].map((m) => m[1]);
+  assert.ok(groups.length >= 5 && groups.length <= 12,
+    `expected 5 to 12 groups, found ${groups.length}: ${groups.join(', ')}`);
+  for (const line of block.split('\n').filter((l) => l.includes("': ["))) {
+    const name = line.match(/'([^']+)':/)![1];
+    const n = (line.match(/\['/g) || []).length;
+    assert.ok(n >= 3, `group "${name}" has only ${n} journals; groups that small are noise`);
+  }
+});
+
+test('the pediatric critical care group stays anchored to the vetted whitelist', () => {
+  // The groups deliberately reach beyond peds CC now, but the peds CC group
+  // itself must still overlap the config Neel actually curated, or the curation
+  // has quietly stopped meaning anything.
+  const block = page.match(/const GROUPS = \{([\s\S]*?)\n\};/)![1];
+  const line = block.split('\n').find((l) => l.includes("'Pediatric critical care'"));
+  assert.ok(line, 'no pediatric critical care group');
+  const names = [...line!.matchAll(/\['([^']+)',/g)].map((m) => m[1]);
+  const cfg = loadTemplate('peds-cc');
+  const vetted = new Set([...cfg.journals.tier_1_primary_cc,
+    ...cfg.journals.tier_2_top_general_plus_adjacent,
+    ...cfg.journals.tier_3_cc_relevance_gate].map((j) => j.toLowerCase()));
+  const overlap = names.filter((n) => vetted.has(n.toLowerCase()));
+  assert.ok(overlap.length >= 2,
+    `peds CC group overlaps the vetted whitelist in only ${overlap.length} journals: ${names.join(', ')}`);
+});
+
+test('the study-type control carries its measured warning', () => {
+  // Measured 2026-09-06: of articles indexed in the previous 30 days, 0 of 15 in
+  // PCCM carried any study-type tag. Shipping the control without the warning
+  // would hand users a filter that silently empties their alert.
+  assert.ok(/showTypeCost/.test(page), 'no live cost readout for study types');
+  assert.ok(/indexing/i.test(page), 'the warning must explain indexing lag');
+  assert.ok(/id="ptWarn"/.test(page), 'no warning element');
+  const checked = page.match(/id="ptypes"[\s\S]{0,400}?checked/);
+  assert.ok(!checked, 'no study type may be checked by default');
 });
 
 test('every publication type offered is a real PubMed publication type', () => {

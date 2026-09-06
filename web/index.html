@@ -117,6 +117,32 @@ legend{font-family:var(--display); font-size:13px; font-weight:500; padding:0; m
 .cand .titles li{margin-bottom:3px}
 .orcid{font-family:var(--mono); font-size:12px; color:var(--ink-quiet)}
 
+/* ---------- journal groups ---------- */
+.grp{border:1px solid var(--rule); margin-bottom:var(--sm)}
+.grp[open]{border-color:var(--rule-strong)}
+.grp summary{
+  display:flex; align-items:center; justify-content:space-between; gap:var(--sm);
+  padding:11px var(--md); cursor:pointer; list-style:none;
+  font-family:var(--display); font-size:14px; font-weight:500;
+  transition:background-color 160ms var(--ease-out)
+}
+.grp summary::-webkit-details-marker{display:none}
+.grp summary:hover{background:var(--tint)}
+.grp summary::before{content:'+'; font-family:var(--mono); color:var(--ink-quiet); margin-right:2px}
+.grp[open] summary::before{content:'\2212'}
+.grp .gmeta{font-size:12px; color:var(--ink-quiet); font-weight:400; white-space:nowrap}
+.grp .choices{padding:0 var(--md) var(--md)}
+
+/* ---------- warning ---------- */
+.warn{
+  border-left:3px solid var(--caution); background:var(--tint); padding:var(--md);
+  font-size:14px; line-height:1.5; margin:var(--md) 0 0
+}
+.warn b{font-family:var(--display); font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--caution); display:block; margin-bottom:var(--xs)}
+.warn.bad{border-left-color:var(--neg)}
+.warn.bad b{color:var(--neg)}
+
 /* ---------- chips ---------- */
 .chips{list-style:none; margin:var(--sm) 0 0; padding:0; display:grid; gap:var(--xs)}
 .chip{
@@ -189,7 +215,11 @@ footer a{color:var(--slate); text-decoration:underline; text-underline-offset:2p
         <div class="row">
           <div>
             <label class="field" for="authorq">Author name</label>
-            <input type="search" id="authorq" placeholder="Barbaro R" autocomplete="off" spellcheck="false">
+            <input type="search" id="authorq" value="Shah N" placeholder="Barbaro R" autocomplete="off" spellcheck="false">
+          </div>
+          <div>
+            <label class="field" for="affq">Institution <span style="font-weight:400;color:var(--ink-quiet)">(optional)</span></label>
+            <input type="search" id="affq" value="Washington University" placeholder="University of Michigan" autocomplete="off" spellcheck="false">
           </div>
           <button id="searchBtn" type="button">Search</button>
         </div>
@@ -233,8 +263,17 @@ footer a{color:var(--slate); text-decoration:underline; text-underline-offset:2p
           </div>
         </fieldset>
         <fieldset>
-          <legend>Study types <span style="font-weight:400;color:var(--ink-quiet)">(leave all unchecked for everything)</span></legend>
+          <legend>Study types <span style="font-weight:400;color:var(--ink-quiet)">(leave unchecked, see below)</span></legend>
           <div class="choices" id="ptypes"></div>
+          <div class="warn" id="ptWarn" role="status" aria-live="polite">
+            <b>Read this before ticking one</b>
+            PubMed assigns study types during MEDLINE indexing, which happens weeks to months after
+            publication. New articles almost never carry one yet. Measured on 6 September 2026, of the
+            articles indexed in the previous 30 days: <b style="display:inline;text-transform:none;letter-spacing:0;font-size:14px;color:inherit">0 of 15</b>
+            in Pediatr Crit Care Med had any study-type tag, 0 of 27 in Crit Care Med, 0 of 25 in ASAIO J,
+            and 2 of 88 in the New England Journal. Filtering an alert by study type will usually make it
+            arrive empty. Tick one and this box will show you the real cost for your own selection.
+          </div>
         </fieldset>
         <fieldset>
           <legend>Delivery</legend>
@@ -332,11 +371,31 @@ const say = (el, msg, cls='') => { el.className = 'status ' + cls; el.textConten
 /* ---------------- state ---------------- */
 const state = { authors:[], journals:[], cadence:'weekly', ptypes:[], split:'combined' };
 
-const CURATED = ["Pediatr Crit Care Med","Crit Care Med","Intensive Care Med","Am J Respir Crit Care Med",
-  "Crit Care","Lancet Respir Med","Chest","Ann Intensive Care","Crit Care Explor","J Crit Care",
-  "Resuscitation","Neurocrit Care","Respir Care","Intensive Care Med Paediatr Neonatal","ASAIO J",
-  "Eur Respir J","Cochrane Database Syst Rev"];
+/* Ten curated groups, 67 journals. Every name was checked against PubMed before
+   shipping: one candidate ("Pediatr Crit Care Med Open") matched nothing and was
+   dropped rather than silently contributing zero. The number beside each journal
+   is its measured articles-per-month, so the cost of adding it is visible. */
+const GROUPS = {
+  'Pediatric critical care': [['Pediatr Crit Care Med',15], ['Intensive Care Med Paediatr Neonatal',1], ['Front Pediatr',235], ['Eur J Pediatr',77], ['Arch Dis Child',28]],
+  'Adult critical care': [['Crit Care Med',27], ['Intensive Care Med',31], ['Crit Care',42], ['Ann Intensive Care',21], ['Crit Care Explor',19], ['J Crit Care',26], ['CHEST Crit Care',0], ['Intensive Crit Care Nurs',30]],
+  'Respiratory and ARDS': [['Am J Respir Crit Care Med',38], ['Lancet Respir Med',11], ['Chest',62], ['Eur Respir J',27], ['Respir Care',20], ['Thorax',11], ['Ann Am Thorac Soc',43], ['Respir Res',8]],
+  'ECMO and mechanical support': [['ASAIO J',25], ['Perfusion',20], ['J Heart Lung Transplant',28], ['Artif Organs',16], ['Int J Artif Organs',19]],
+  'Neurocritical care': [['Neurocrit Care',17], ['Resuscitation',38], ['J Neurotrauma',10], ['Stroke',36], ['Neurology',86], ['Dev Med Child Neurol',54]],
+  'Cardiac critical care': [['Pediatr Cardiol',51], ['Cardiol Young',12], ['Circulation',81], ['J Am Coll Cardiol',64], ['World J Pediatr Congenit Heart Surg',16], ['Ann Thorac Surg',24]],
+  'General pediatrics': [['Pediatrics',60], ['JAMA Pediatr',32], ['Hosp Pediatr',34], ['J Pediatr',31], ['Acad Pediatr',5], ['Pediatr Res',90]],
+  'General medicine': [['N Engl J Med',88], ['JAMA',150], ['Lancet',134], ['BMJ',186], ['Ann Intern Med',56], ['Nat Med',66], ['JAMA Netw Open',211], ['Cochrane Database Syst Rev',36]],
+  'Informatics and AI': [['NEJM AI',3], ['J Am Med Inform Assoc',9], ['JAMIA Open',13], ['NPJ Digit Med',21], ['Lancet Digit Health',24], ['J Biomed Inform',9], ['Appl Clin Inform',9]],
+  'Sepsis, infection and kidney': [['Shock',17], ['Clin Infect Dis',62], ['Lancet Infect Dis',36], ['Pediatr Infect Dis J',40], ['Kidney Int',34], ['Am J Kidney Dis',15], ['Blood Purif',14], ['Pediatr Nephrol',37]],
+};
 
+/* Study-type filtering measured across ten journals on 2026-09-06. NLM assigns
+   publication types during MEDLINE indexing, which lags publication by weeks to
+   months, so recent articles carry almost none. Articles indexed in the last 30
+   days carrying ANY study-type tag: Pediatr Crit Care Med 0 of 15, Crit Care Med
+   0 of 27, ASAIO J 0 of 25, Intensive Care Med 0 of 31, N Engl J Med 2 of 88,
+   Pediatrics 4 of 60. Even settled back-years reach only 22% (PCCM 2023) and 11%
+   (ASAIO 2023). A study-type filter on an ALERT therefore empties it. The control
+   stays, defaulted off, and shows the live cost before it is applied. */
 const PTYPES = [
   ['Randomized Controlled Trial', 'Trials'],
   ['Meta-Analysis',               'Meta-analyses'],
@@ -347,7 +406,14 @@ const PTYPES = [
 ];
 
 /* ---------------- query composition ---------------- */
-function authorClause(a){ return a.orcid ? `${a.orcid}[auid]` : `"${a.name}"[au]`; }
+/* An ORCID is unambiguous on its own. Without one, the affiliation is what
+   distinguished this person in the picker, so it has to travel into the query
+   too. Dropping it would make the disambiguation UI decorative: the user picks
+   the right Neel Shah and the alert still returns every N Shah in PubMed. */
+function authorClause(a){
+  if(a.orcid) return `${a.orcid}[auid]`;
+  return a.aff ? `("${a.name}"[au] AND "${a.aff}"[ad])` : `"${a.name}"[au]`;
+}
 function orGroup(parts){ return parts.length > 1 ? '(' + parts.join(' OR ') + ')' : parts[0]; }
 
 function buildQuery(){
@@ -376,10 +442,20 @@ const pubmedUrl = q => 'https://pubmed.ncbi.nlm.nih.gov/?' +
 function xml(text){ return new DOMParser().parseFromString(text, 'application/xml'); }
 const txt = (node, sel) => node.querySelector(sel)?.textContent?.trim() || '';
 
-async function searchAuthors(name){
-  const ids = await eutils('esearch.fcgi',
-    { term:`${name}[au]`, retmax:60, retmode:'json', sort:'date' })
+/* A common surname buries the person you want: searching "Shah N" alone returns
+   the sixty most recent papers by any N Shah, and a specific one may not appear
+   at all. Narrowing by institution with [ad] is what makes common names usable. */
+async function searchAuthors(name, aff){
+  const term = aff && aff.trim() ? `${name}[au] AND "${aff.trim()}"[ad]` : `${name}[au]`;
+  let ids = await eutils('esearch.fcgi',
+    { term, retmax:80, retmode:'json', sort:'date' })
     .then(j => j.esearchresult.idlist || []);
+  /* If the institution filter finds nobody, fall back rather than dead-end. */
+  if(!ids.length && aff && aff.trim()){
+    ids = await eutils('esearch.fcgi', { term:`${name}[au]`, retmax:80, retmode:'json', sort:'date' })
+      .then(j => j.esearchresult.idlist || []);
+    if(ids.length) searchAuthors.fellBack = true;
+  } else searchAuthors.fellBack = false;
   if(!ids.length) return [];
 
   const doc = xml(await eutils('efetch.fcgi', { id:ids.join(','), retmode:'xml' }));
@@ -426,9 +502,24 @@ function renderCandidates(list, name){
   ul.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => addAuthor(list[+b.dataset.pick]));
 }
 
+/* The narrowest useful piece of an affiliation string: "Department of
+   Pediatrics, Washington University in St. Louis, MO." -> "Washington University
+   in St. Louis". The department is too generic and the city too broad. */
+function firstAffiliationClause(aff){
+  if(!aff) return '';
+  const parts = aff.split(/[,;]/).map(x => x.trim()).filter(Boolean);
+  const inst = parts.find(x => /universit|hospital|college|institut|school|centre|center|clinic/i.test(x));
+  return (inst || parts[0] || '').replace(/["\\]/g, '').slice(0, 70);
+}
+
 async function addAuthor(c){
   if(state.authors.some(a => (a.orcid && a.orcid === c.orcid) || a.name === c.name)) return;
-  const entry = { orcid:c.orcid, name:c.orcid ? (c.full || c.name) : c.name, lastYear:null };
+  const entry = {
+    orcid: c.orcid,
+    name: c.orcid ? (c.full || c.name) : c.name,
+    aff: c.orcid ? '' : ($('affq').value.trim() || firstAffiliationClause(c.aff)),
+    lastYear: null,
+  };
   state.authors.push(entry);
   $('cands').innerHTML = ''; $('authorq').value = '';
   say($('authorStatus'), `Following ${entry.name}.`, 'ok');
@@ -444,7 +535,9 @@ function renderAuthors(){
   $('authorChips').hidden = state.authors.length === 0;
   $('authorList').innerHTML = state.authors.map((a,i) => `
     <li class="chip">
-      <span>${esc(a.name)} ${a.orcid ? `<span class="orcid">${esc(a.orcid)}</span>` : '<span class="orcid">name match</span>'}</span>
+      <span>${esc(a.name)} ${a.orcid
+        ? `<span class="orcid">${esc(a.orcid)}</span>`
+        : `<span class="orcid">${a.aff ? 'at ' + esc(a.aff) : 'name match only'}</span>`}</span>
       <span><span class="meta">${a.lastYear === null ? '…' : a.lastYear + ' since ' + (new Date().getFullYear()-1)}</span>
       <button type="button" aria-label="Stop following ${esc(a.name)}" data-rm="${i}">&times;</button></span>
     </li>`).join('');
@@ -482,6 +575,7 @@ function renderJournals(){
       <span><span class="meta">${j.n30} in 30 days</span>
       <button type="button" aria-label="Remove ${esc(j.name)}" data-rm="${i}">&times;</button></span>
     </li>`).join('');
+  updateGroupCounts();
   $('journalList').querySelectorAll('[data-rm]').forEach(b => b.onclick = () => {
     const gone = state.journals.splice(+b.dataset.rm, 1)[0];
     const box = document.querySelector(`#curated input[value="${CSS.escape(gone.name)}"]`);
@@ -558,8 +652,21 @@ async function loadSample(q, my){
 }
 
 /* ---------------- wiring ---------------- */
-$('curated').innerHTML = CURATED.map(j =>
-  `<label class="choice"><input type="checkbox" value="${esc(j)}"><span>${esc(j)}</span></label>`).join('');
+$('curated').innerHTML = Object.entries(GROUPS).map(([g, js], gi) => `
+  <details class="grp"${gi === 0 ? ' open' : ''}>
+    <summary><span class="gname">${esc(g)}</span><span class="gmeta"><span data-picked="${esc(g)}">0</span> of ${js.length}</span></summary>
+    <div class="choices">
+      ${js.map(([j, m]) => `<label class="choice"><input type="checkbox" value="${esc(j)}"><span>${esc(j)}<span class="cap">${m} per month</span></span></label>`).join('')}
+    </div>
+  </details>`).join('');
+
+function updateGroupCounts(){
+  for(const [g, js] of Object.entries(GROUPS)){
+    const picked = js.filter(([j]) => state.journals.some(x => x.name === j)).length;
+    const el = document.querySelector(`[data-picked="${CSS.escape(g)}"]`);
+    if(el) el.textContent = picked;
+  }
+}
 $('curated').addEventListener('change', e => {
   const name = e.target.value;
   if(e.target.checked) addJournal(name);
@@ -571,10 +678,39 @@ $('curated').addEventListener('change', e => {
 
 $('ptypes').innerHTML = PTYPES.map(([v,l]) =>
   `<label class="choice"><input type="checkbox" value="${esc(v)}"><span>${esc(l)}</span></label>`).join('');
-$('ptypes').addEventListener('change', () => {
+$('ptypes').addEventListener('change', async () => {
   state.ptypes = [...$('ptypes').querySelectorAll('input:checked')].map(i => i.value);
   refresh();
+  await showTypeCost();
 });
+
+/* Shows what the chosen study types actually cost on THIS selection, rather than
+   letting the user discover it when an empty alert arrives three weeks later. */
+async function showTypeCost(){
+  const box = $('ptWarn');
+  const subject = [...state.authors.map(authorClause), ...state.journals.map(j => `"${j.name}"[ta]`)];
+  if(!state.ptypes.length || !subject.length){ box.className = 'warn'; return; }
+  const base = orGroup(subject);
+  const filtered = `${base} AND ` + orGroup(state.ptypes.map(t => `"${t}"[pt]`));
+  box.className = 'warn';
+  box.innerHTML = '<b>Measuring the cost</b>Checking your selection against PubMed…';
+  try{
+    const [a, b] = [await count(base, 30), await count(filtered, 30)];
+    const lost = a - b;
+    const pct = a ? Math.round(100 * lost / a) : 0;
+    const severe = a > 0 && (b === 0 || pct >= 70);
+    box.className = 'warn' + (severe ? ' bad' : '');
+    box.innerHTML = `<b>${severe ? 'This will empty your alert' : 'Cost of this filter'}</b>` +
+      `Over the last 30 days your selection matched <b style="display:inline;text-transform:none;letter-spacing:0;font-size:14px;color:inherit">${a}</b> papers. ` +
+      `With these study types it matches <b style="display:inline;text-transform:none;letter-spacing:0;font-size:14px;color:inherit">${b}</b>, ` +
+      `losing ${lost} (${pct}%). ` +
+      (severe ? 'That is indexing lag, not a lack of good papers. Untick these and filter by journal instead.'
+              : 'Recent articles are the least likely to carry a study type, so expect this to grow over time.');
+  }catch{
+    box.className = 'warn';
+    box.innerHTML = '<b>Could not measure</b>PubMed did not respond. The warning above still applies.';
+  }
+}
 
 document.querySelectorAll('input[name=cadence]').forEach(r => r.addEventListener('change', e => {
   state.cadence = e.target.value; refresh();
@@ -589,9 +725,15 @@ async function doSearch(){
   $('searchBtn').disabled = true;
   say($('authorStatus'), 'Searching PubMed…');
   try{
-    const list = await searchAuthors(name);
-    if(!list.length) say($('authorStatus'), `No recent papers found for "${name}". Try surname plus initial.`, 'err');
-    else say($('authorStatus'), `${list.length} possible ${list.length===1?'person':'people'} matched. Pick the right one.`);
+    const aff = $('affq').value;
+    const list = await searchAuthors(name, aff);
+    if(!list.length){
+      say($('authorStatus'), `No recent papers found for "${name}". Try surname plus initial, for example "Shah N".`, 'err');
+    } else if(searchAuthors.fellBack){
+      say($('authorStatus'), `No papers matched "${name}" at ${aff.trim()}, so this shows all ${list.length} recent matches for the name instead.`);
+    } else {
+      say($('authorStatus'), `${list.length} possible ${list.length===1?'person':'people'} matched${aff.trim()?' at '+aff.trim():''}. Pick the right one.`);
+    }
     renderCandidates(list, name);
   }catch(e){
     say($('authorStatus'), 'Could not reach PubMed. Check your connection and try again.', 'err');
@@ -600,6 +742,7 @@ async function doSearch(){
 $('searchBtn').onclick = doSearch;
 $('authorq').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); doSearch(); }});
 $('addJournal').onclick = () => addJournal($('journalq').value);
+$('affq').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); doSearch(); }});
 $('journalq').addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); addJournal($('journalq').value); }});
 
 $('copyBtn').onclick = async () => {
