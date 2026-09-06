@@ -60,7 +60,11 @@ jobs:
         env:
           # Without these the job silently uses the local file store, which on an
           # ephemeral runner means no subscribers at all. This step reads subscribers and prefs, writes the dedup ledger.
-          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          # Dry unless a manual run says otherwise AND a send key exists. Without
+          # RESEND_API_KEY there is nothing to send with, so a scheduled run would
+          # fail every Monday until setup is finished — noise, not signal. This is
+          # not swallowing a failure: a run WITH a key that fails still fails.
+          DRY_RUN: ${{ (secrets.RESEND_API_KEY == '' && 'true') || inputs.dry_run || 'false' }}
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           MAIL_FROM: ${{ secrets.MAIL_FROM }}
         run: npm run digest

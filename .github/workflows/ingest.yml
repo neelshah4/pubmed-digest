@@ -86,6 +86,11 @@ jobs:
           # inactivity clock on scheduled workflows.
           mkdir -p data
           date -u +%FT%TZ > data/last-ingest.txt
+          # Keep the committed cache to a rolling window. Committing the full
+          # archive daily would add roughly 4 MB per run; over a year that is
+          # ~1.5 GB against GitHub's 5 GB soft limit. Supabase removes the need
+          # for this entirely, which is why the commit below is conditional.
+          node --experimental-strip-types tools/prune-cache.ts 120
           git add -f data/last-ingest.txt
           if [ -z "${SUPABASE_URL:-}" ]; then
             git add -f data/papers.json
