@@ -117,6 +117,41 @@ legend{font-family:var(--display); font-size:13px; font-weight:500; padding:0; m
 .cand .titles li{margin-bottom:3px}
 .orcid{font-family:var(--mono); font-size:12px; color:var(--ink-quiet)}
 
+/* ---------- selectable candidates ---------- */
+.cand.pickable{padding:0}
+.cand .pick{display:flex; gap:var(--md); align-items:flex-start; padding:var(--md); cursor:pointer; margin:0}
+.cand .pick > input{margin:3px 0 0; accent-color:var(--slate); flex:none; width:17px; height:17px}
+.cand:has(input:checked){border-left-color:var(--slate); background:var(--tint)}
+.cand .body{min-width:0; flex:1}
+.hintbadge{
+  display:inline-block; font-family:var(--display); font-size:11px; font-weight:500;
+  letter-spacing:.04em; padding:2px 7px; border-radius:3px; margin-left:var(--sm);
+  background:var(--slate-pale); color:var(--slate-deep)
+}
+.hintbadge.quiet{background:var(--tint-deep); color:var(--ink-quiet); font-weight:400}
+.recn{font-family:var(--display); font-size:12px; color:var(--ink-quiet); margin:var(--sm) 0 0}
+@media (prefers-color-scheme:dark){ .hintbadge{background:var(--slate-pale); color:var(--ink)} }
+.candbar{
+  position:sticky; bottom:0; display:flex; flex-wrap:wrap; gap:var(--sm); align-items:center;
+  padding:var(--md); margin-top:var(--sm);
+  background:var(--paper); border:1px solid var(--rule-strong)
+}
+.candbar .count{font-family:var(--display); font-size:13px; color:var(--ink-muted); margin-right:auto}
+.candbar button[disabled]{opacity:.4}
+
+/* ---------- format hint ---------- */
+.formats{
+  border-left:3px solid var(--slate-pale); background:var(--tint); padding:var(--md);
+  margin:0 0 var(--md); font-size:14px; line-height:1.55
+}
+.formats b{font-family:var(--display); font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--ink-quiet); display:block; margin-bottom:var(--xs)}
+.formats code{
+  font-family:var(--mono); font-size:13px; background:var(--paper);
+  border:1px solid var(--rule); padding:1px 6px; border-radius:3px; white-space:nowrap
+}
+.formats .row2{margin-top:var(--sm); color:var(--ink-muted)}
+
 /* ---------- journal groups ---------- */
 .grp{border:1px solid var(--rule); margin-bottom:var(--sm)}
 .grp[open]{border-color:var(--rule-strong)}
@@ -211,8 +246,16 @@ footer a{color:var(--slate); text-decoration:underline; text-underline-offset:2p
       <section class="card">
         <span class="label">Step one</span><hr class="hr">
         <h2>Follow specific people</h2>
-        <p class="hint">Type it however you write it. <b>Kolmar A</b>, <b>Amanda Kolmar</b> and <b>Kolmar, A</b> all work; the surname is worked out from the results rather than from word order. Adding an institution narrows a common name a great deal.</p>
-        <p class="hint">PubMed does not group authors, so one person can appear as several results when their affiliation changed or their middle initial comes and goes. If the results below are all the same person, say so and they will be followed as one.</p>
+        <div class="formats">
+          <b>How to enter a name</b>
+          Surname first with an initial is the most reliable: <code>Kolmar A</code>, <code>Raman L</code>, <code>Said A</code>.
+          <div class="row2">
+            These also work, because the surname is identified from the results rather than from word order:
+            <code>Amanda Kolmar</code> · <code>Kolmar, A</code> · <code>Kolmar AR</code>.
+            Do not add a degree or a title. For a common surname, fill in the institution as well.
+          </div>
+        </div>
+        <p class="hint">PubMed does not group authors, so one person can appear as several results when their affiliation changed or their middle initial comes and goes. Records that clearly belong together are combined already; tick the boxes to combine any that remain.</p>
         <div class="row">
           <div>
             <label class="field" for="authorq">Author name</label>
@@ -345,7 +388,7 @@ footer a{color:var(--slate); text-decoration:underline; text-underline-offset:2p
   </footer>
 </div>
 <script type="module">
-import { clusterAuthors, institutionKey } from './disambiguate.js';
+import { clusterAuthors, clusterAffinity, institutionKey } from './disambiguate.js';
 'use strict';
 
 const EUTILS = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/';
@@ -524,30 +567,79 @@ async function searchAuthors(name, aff){
 
   /* The clustering itself lives in disambiguate.js so it can be tested against
      records captured from live PubMed for real people. See tests/. */
+  searchAuthors.records = records;
   return clusterAuthors(records, { totalForName }).slice(0, 8);
 }
 
 function renderCandidates(list, name){
   const ul = $('cands');
   if(!list.length){ ul.innerHTML = ''; return; }
-  const multi = list.length > 1;
-  ul.innerHTML = (multi ? `
-    <li class="cand" style="border-left-color:var(--slate)">
-      <p class="who">Are these all the same person?</p>
-      <p class="aff">One researcher often appears more than once here: an affiliation changes, a middle initial comes and goes, or an ORCID reached PubMed on only some papers. Combining follows every version as a single author.</p>
-      <button class="tiny" type="button" id="combineAll">Combine all ${list.length} into one</button>
-    </li>` : '') + list.map((c,i) => `
-    <li class="cand">
-      <p class="who">${esc(c.full || c.name)}</p>
-      ${c.orcid ? `<p class="orcid">ORCID ${esc(c.orcid)}</p>` : ''}
-      ${c.aff ? `<p class="aff">${esc(c.aff.slice(0,140))}</p>` : '<p class="aff">No affiliation listed on these records.</p>'}
-      <ul class="titles">${c.papers.map(p => `<li>${esc(p.title.slice(0,110))} <span class="j">${esc(p.journal)}${p.year?' '+esc(p.year):''}</span></li>`).join('')}</ul>
-      <button class="tiny" type="button" data-pick="${i}">Follow this person</button>
-      ${c.orcid ? '' : '<span class="orcid" style="margin-left:8px">Name match only, may include others</span>'}
-    </li>`).join('');
-  ul.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => addAuthor(list[+b.dataset.pick]));
-  const combineBtn = document.getElementById('combineAll');
-  if(combineBtn) combineBtn.onclick = () => combineAll(list);
+
+  /* Everything the algorithm was confident about is already merged. What is left
+     is genuinely uncertain, and the reader knows their own field better than any
+     threshold does, so the leftovers are scored only to hint, never to act. */
+  const recs = searchAuthors.records || [];
+
+  /* Hints are computed against whatever the reader has actually ticked, not
+     against whichever entry happens to be first. Comparing everything to entry
+     one produced "different person" badges that were true and useless: of course
+     Ethan is not Eric. Nothing is asserted until there is something to compare to. */
+  ul.innerHTML = list.map((c, i) => {
+    return `
+    <li class="cand pickable">
+      <label class="pick">
+        <input type="checkbox" data-cand="${i}">
+        <div class="body">
+          <p class="who">${esc(c.full || c.fore)}<span class="hintslot" data-hint="${i}"></span></p>
+          ${c.orcid ? `<p class="orcid">ORCID ${esc(c.orcid)}</p>`
+                    : '<p class="orcid">No ORCID on these records</p>'}
+          <p class="aff">${c.aff ? esc(c.aff.slice(0,150)) : 'No affiliation listed on these records.'}</p>
+          <ul class="titles">${c.papers.map(p =>
+            `<li>${esc((p.title||'').slice(0,105))} <span class="j">${esc(p.journal||'')}${p.year?' '+esc(p.year):''}</span></li>`).join('')}</ul>
+          <p class="recn">${c.n} record${c.n===1?'':'s'}</p>
+        </div>
+      </label>
+    </li>`;
+  }).join('') + `
+    <li class="candbar">
+      <span class="count" id="pickCount">Nothing selected</span>
+      <button class="tiny" type="button" id="followOne" disabled>Follow as one person</button>
+      <button class="tiny ghost" type="button" id="followSep" disabled>Follow separately</button>
+    </li>`;
+
+  const boxes = [...ul.querySelectorAll('[data-cand]')];
+  const picked = () => boxes.filter(b => b.checked).map(b => list[+b.dataset.cand]);
+  const sync = () => {
+    const chosen = boxes.map((b, i) => b.checked ? i : -1).filter(i => i >= 0);
+    for(let i = 0; i < list.length; i++){
+      const slot = ul.querySelector(`[data-hint="${i}"]`);
+      if(!slot) continue;
+      if(!chosen.length || chosen.includes(i)){ slot.innerHTML = ''; continue; }
+      const best = Math.max(...chosen.map(j => clusterAffinity(list[j], list[i], recs)));
+      slot.innerHTML = best >= 0.55
+        ? '<span class="hintbadge">likely the same as your selection</span>'
+        : (best === 0 ? '<span class="hintbadge quiet">no overlap with your selection</span>' : '');
+    }
+    const n = picked().length;
+    $('pickCount').textContent = n === 0 ? 'Nothing selected'
+      : n === 1 ? '1 selected' : `${n} selected, to be followed as one person`;
+    $('followOne').disabled = n === 0;
+    $('followSep').disabled = n === 0;
+    $('followOne').textContent = n > 1 ? `Follow these ${n} as one person` : 'Follow as one person';
+  };
+  boxes.forEach(b => b.addEventListener('change', sync));
+  sync();
+
+  $('followOne').onclick = () => {
+    const sel = picked();
+    if(sel.length === 1) addAuthor(sel[0]); else combineAll(sel);
+  };
+  $('followSep').onclick = () => {
+    const sel = picked();
+    sel.forEach(c => addAuthor(c));
+    $('cands').innerHTML = '';
+    say($('authorStatus'), `Following ${sel.length} ${sel.length===1?'person':'people'} separately.`, 'ok');
+  };
 }
 
 /* The narrowest useful piece of an affiliation string: "Department of

@@ -221,3 +221,42 @@ export function clusterAuthors(records, { threshold = 0.8, totalForName = null }
     })
     .sort((a, b) => b.n - a.n);
 }
+
+/**
+ * How alike are two already-formed clusters, in [0,1]?
+ *
+ * clusterAuthors() has already merged everything it is confident about. What
+ * survives is genuinely uncertain, and the reader is better placed to judge it
+ * than any threshold. This scores the leftovers so the interface can say which
+ * ones look related, without acting on that guess itself.
+ */
+export function clusterAffinity(a, b, records) {
+  const recsOf = (c) => records.filter((r) => c.pmids.includes(r.pmid));
+  const ra = recsOf(a), rb = recsOf(b);
+  if (!ra.length || !rb.length) return 0;
+
+  if (a.orcid && b.orcid) return a.orcid === b.orcid ? 1 : 0;
+
+  const fa = (a.fore || '').trim().toLowerCase().split(/[\s.]+/)[0];
+  const fb = (b.fore || '').trim().toLowerCase().split(/[\s.]+/)[0];
+  const bothFull = fa.length > 1 && fb.length > 1;
+  if (bothFull && fa !== fb) return 0;                 // Amanda is not Andrew
+  if (fa && fb && fa[0] !== fb[0]) return 0;
+
+  const co = (rs) => new Set(rs.flatMap((r) => (r.coauthors || []).map((c) => c.toLowerCase())));
+  const A = co(ra), B = co(rb);
+  let shared = 0;
+  for (const x of A) if (B.has(x)) shared++;
+
+  const instMatch = a.insts.some((x) => b.insts.some((y) => sameInstitution(x, y)));
+
+  let s = 0;
+  if (shared >= 3) s += 0.55;
+  else if (shared === 2) s += 0.42;
+  else if (shared === 1) s += 0.28;
+  if (instMatch) s += 0.28;
+  if (bothFull && fa === fb) s += 0.18;
+  const jrn = new Set(ra.map((r) => r.journal));
+  if (rb.some((r) => jrn.has(r.journal))) s += 0.08;
+  return Math.min(1, s);
+}
