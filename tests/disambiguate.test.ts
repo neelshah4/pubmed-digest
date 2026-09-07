@@ -11,7 +11,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert';
 import { readFileSync } from 'node:fs';
-import { clusterAuthors, compatible, institutionKey, similarity, sameInstitution } from '../web/disambiguate.js';
+import { clusterAuthors, compatible, institutionKey, similarity, sameInstitution, authorQuery, tidyInstitutions } from '../web/disambiguate.js';
 
 const load = (slug: string) =>
   JSON.parse(readFileSync(new URL(`./fixtures/authors/${slug}.json`, import.meta.url), 'utf8')).records;
@@ -156,4 +156,41 @@ test('shared co-authors merge, and their absence does not', () => {
     { ...base, pmid: '2', aff: 'Beta Institute',   coauthors: ['Silva M', 'Haddad Y'] },
   ], { totalForName: 5000 });
   assert.strictEqual(unlinked.length, 2, 'no shared co-authors and no shared institution should not merge');
+});
+
+test('following a person never relies on their ORCID alone', () => {
+  // Measured 2026-09-06 on four real researchers, ORCID-only against name-based
+  // coverage: 4 against 241, 18 against 155, 5 against 75, 5 against 17. An
+  // ORCID reaches PubMed only when a publisher attached it at submission, often
+  // just for the corresponding author. Following one alone silently misses most
+  // of a person's work, which is precisely the failure this tool exists to stop.
+  const q = authorQuery({ orcids: ['0000-0001-8873-6482'], nameTerm: 'Shah N', insts: [], common: false });
+  assert.ok(q.includes('[auid]'), 'the ORCID should still be used');
+  assert.ok(q.includes('Shah N[au]'), 'the name must be in the query, not just the ORCID');
+  assert.ok(q.includes(' OR '), 'the two should be unioned');
+});
+
+test('a common surname is scoped by institution, a rare one is not', () => {
+  const common = authorQuery({ orcids: [], nameTerm: 'Shah N', insts: ['Washington University'], common: true });
+  assert.ok(/Washington University"\[ad\]/.test(common), 'a common name needs scoping');
+  const rare = authorQuery({ orcids: [], nameTerm: 'Kolmar A', insts: ['Washington University'], common: false });
+  assert.strictEqual(rare, 'Kolmar A[au]', 'a rare name should not be narrowed needlessly');
+});
+
+test('the author query never quotes the name', () => {
+  const q = authorQuery({ orcids: [], nameTerm: 'Barbaro R', insts: [], common: false });
+  assert.ok(!/"Barbaro R"/.test(q), 'quoting the name costs 72% of matches');
+});
+
+test('the institution list drops redundant and mangled entries', () => {
+  const tidy = tidyInstitutions([
+    'Washington University St Louis',
+    'Washington University',
+    'Washington University St Louis Childrens Hospital',
+    'Artificial Intelligence Ai Health Institute Aihealth Something Long',
+  ]);
+  assert.deepStrictEqual(tidy, ['Washington University'],
+    'the shortest form already matches the longer ones in [ad]; the rest are noise');
+  assert.ok(tidyInstitutions(['Duke University', 'Emory University']).length === 2,
+    'genuinely different institutions must both survive');
 });

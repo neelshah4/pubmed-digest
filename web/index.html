@@ -248,10 +248,10 @@ footer a{color:var(--slate); text-decoration:underline; text-underline-offset:2p
         <h2>Follow specific people</h2>
         <div class="formats">
           <b>How to enter a name</b>
-          Surname first with an initial is the most reliable: <code>Kolmar A</code>, <code>Raman L</code>, <code>Said A</code>.
+          Surname first with an initial is the most reliable: <code>Surname A</code>.
           <div class="row2">
             These also work, because the surname is identified from the results rather than from word order:
-            <code>Amanda Kolmar</code> · <code>Kolmar, A</code> · <code>Kolmar AR</code>.
+            <code>Firstname Surname</code> · <code>Surname, A</code> · <code>Surname AB</code>.
             Do not add a degree or a title. For a common surname, fill in the institution as well.
           </div>
         </div>
@@ -388,7 +388,7 @@ footer a{color:var(--slate); text-decoration:underline; text-underline-offset:2p
   </footer>
 </div>
 <script type="module">
-import { clusterAuthors, clusterAffinity, institutionKey } from './disambiguate.js';
+import { clusterAuthors, clusterAffinity, institutionKey, authorQuery, COMMON_NAME_RECORDS } from './disambiguate.js';
 'use strict';
 
 const EUTILS = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/';
@@ -466,18 +466,26 @@ const PTYPES = [
    the right Neel Shah and the alert still returns every N Shah in PubMed. */
 /* Author names go into [au] UNQUOTED. Measured 2026-09-06: quoting forces exact
    phrase matching on the author index and silently discards records indexed
-   under a fuller form. Kolmar A[au] returns 17 and "Kolmar A"[au] returns 10;
-   Barbaro R[au] returns 155 and "Barbaro R"[au] returns 43, a 72% loss. Journals
-   [ta] and publication types [pt] are unaffected by quoting and keep theirs. */
-function authorClause(a){
-  if(a.combined){
-    const parts = a.combined.orcids.map(o => `${o}[auid]`);
-    if(a.combined.nameTerm) parts.push(`${a.combined.nameTerm}[au]`);
-    return orGroup(parts);
-  }
-  if(a.orcid) return `${a.orcid}[auid]`;
-  return a.aff ? `(${a.name}[au] AND "${a.aff}"[ad])` : `${a.name}[au]`;
-}
+   under a fuller form. One surname plus initial returns 17 unquoted and 10
+   quoted; another returns 155 unquoted and 43 quoted, a 72% loss. Journals
+   [ta] and publication types [pt] are unaffected by quoting and keep theirs.
+   
+   An ORCID alone is NOT how to follow someone. Publishers pass it through only
+   when it was attached at submission, which is often just the corresponding
+   author, so it lands on a small minority of a person's papers. Measured on four
+   real researchers, ORCID-only against name-based coverage: 4 against 241,
+   18 against 155, 5 against 75, 5 against 17. In every case the union equalled
+   the name count, meaning the ORCID widened nothing; its value is telling two
+   people apart, not finding one person's work. So the query is the union, with
+   the name half scoped by institution only when the surname is common enough to
+   need it. */
+/* authorQuery lives in disambiguate.js so the ORCID-versus-name decision is
+   testable; see tests/disambiguate.test.ts. */
+const authorClause = (a) => authorQuery({
+  orcids: a.combined ? a.combined.orcids : (a.orcid ? [a.orcid] : []),
+  nameTerm: a.nameTerm, insts: a.insts, common: a.common,
+}) || (a.orcid ? `${a.orcid}[auid]` : `${a.name}[au]`);
+
 function orGroup(parts){ return parts.length > 1 ? '(' + parts.join(' OR ') + ')' : parts[0]; }
 
 function buildQuery(){
@@ -524,13 +532,14 @@ async function searchAuthors(name, aff){
 
   /* How common is this name across all of PubMed? The clusterer needs it: two
      compatible records mean one person on a rare surname and nothing at all on a
-     common one. Kolmar A returns 17, Barbaro R 155, Shah N 9846. */
+     common one: three surname-plus-initial searches returned 17, 155 and 9846. */
   const totalForName = await count(`${name}[au]`).catch(() => null);
+  searchAuthors.totalForName = totalForName;
 
   const doc = xml(await eutils('efetch.fcgi', { id:ids.join(','), retmode:'xml' }));
 
-  /* Which token is the surname? Taking the first assumed "Kolmar A" order and
-     broke on "Amanda Kolmar". PubMed accepts either, so the surname is whichever
+  /* Which token is the surname? Taking the first assumed "Surname A" order and
+     broke on "Firstname Surname". PubMed accepts either, so the surname is whichever
      query token actually turns up as a LastName in the records. */
   const tokens = name.toLowerCase().split(/[\s,.]+/).filter(t => t.length > 1);
   const hits = new Map();
@@ -583,7 +592,8 @@ function renderCandidates(list, name){
   /* Hints are computed against whatever the reader has actually ticked, not
      against whichever entry happens to be first. Comparing everything to entry
      one produced "different person" badges that were true and useless: of course
-     Ethan is not Eric. Nothing is asserted until there is something to compare to. */
+     one first name is not another. Nothing is asserted until there is
+     something to compare it to. */
   ul.innerHTML = list.map((c, i) => {
     return `
     <li class="cand pickable">
@@ -657,8 +667,8 @@ function firstAffiliationClause(aff){
    ORCID only reached some papers, is covered once rather than as several
    near-duplicate entries the user has to add one by one. */
 /* Measured 2026-09-06, and it changed this design: PubMed's affiliation index
-   does not reliably cover non-first authors. Three of Amanda Kolmar's 2023-24
-   papers carry "Washington University in St. Louis" in the record and still do
+   does not reliably cover non-first authors. Three of one researcher's 2023-24
+   papers name their own university in the record and still do
    not match washington[ad] AND university[ad]. Scoping a combined author by
    affiliation therefore drops real work silently, which is the failure mode this
    whole tool exists to avoid. The user has just asserted these are one person,
@@ -668,8 +678,7 @@ function firstAffiliationClause(aff){
 function combineAll(list){
   const orcids = [...new Set(list.map(c => c.orcid).filter(Boolean))];
   /* Use the NORMALISED institution, not the literal clause. One author writes
-     "Washington University School of Medicine", "Washington University in St.
-     Louis" and "Washington University in St Louis" across her own papers; the
+     three different spellings of the same university across their own papers; the
      literal strings do not match each other in [ad], so scoping on them dropped
      four of her seventeen records. The normalised form matches all three. */
   const insts = [...new Set(list.map(c => titleCase(institutionKey(c.aff))).filter(Boolean))];
@@ -679,8 +688,11 @@ function combineAll(list){
   const entry = {
     orcid: '',
     name: list[0].full || nameTerm || 'combined author',
+    nameTerm,
+    insts,
     combined: { orcids, insts, nameTerm },
     aff: '',
+    common: (searchAuthors.totalForName ?? 0) > COMMON_NAME_RECORDS,
     lastYear: null,
   };
   if(state.authors.some(a => a.combined && a.name === entry.name)) return;
@@ -716,10 +728,17 @@ async function countCombined(entry, list){
 
 async function addAuthor(c){
   if(state.authors.some(a => (a.orcid && a.orcid === c.orcid) || a.name === c.name)) return;
+  const surname = searchAuthors.surname || (c.last || '').toLowerCase();
+  const initial = (c.fore || c.full || '').trim().charAt(0).toUpperCase();
   const entry = {
     orcid: c.orcid,
-    name: c.orcid ? (c.full || c.name) : c.name,
-    aff: c.orcid ? '' : ($('affq').value.trim() || firstAffiliationClause(c.aff)),
+    name: c.full || c.name,
+    /* The name form the query actually uses. Surname plus initial is what PubMed
+       indexes most completely; a fuller form is narrower, not better. */
+    nameTerm: surname ? `${surname.charAt(0).toUpperCase()}${surname.slice(1)} ${initial}`.trim() : '',
+    insts: (c.insts || []).map(i => i.replace(/\b[a-z]/g, ch => ch.toUpperCase())),
+    aff: $('affq').value.trim() || firstAffiliationClause(c.aff),
+    common: (searchAuthors.totalForName ?? 0) > COMMON_NAME_RECORDS,
     lastYear: null,
   };
   state.authors.push(entry);
@@ -926,7 +945,7 @@ document.querySelectorAll('input[name=split]').forEach(r => r.addEventListener('
 
 async function doSearch(){
   const name = $('authorq').value.trim();
-  if(name.length < 2){ say($('authorStatus'), 'Enter a surname, for example "Barbaro R".', 'err'); return; }
+  if(name.length < 2){ say($('authorStatus'), 'Enter a surname and initial, for example "Surname A".', 'err'); return; }
   $('searchBtn').disabled = true;
   say($('authorStatus'), 'Searching PubMed…');
   try{

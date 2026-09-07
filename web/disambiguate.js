@@ -3,12 +3,12 @@
  *
  * PubMed does not group authors, so one search returns a mix of people sharing a
  * surname and initial. Measured on real colleagues (tests/fixtures/authors):
- *   - "Said A" spans three different Ahmed Saids at Al-Azhar, KAUST and
- *     Washington University, so a forename match alone is NOT identity.
- *   - "Barbaro R" carries no affiliation at all on 70 of 110 records, so
+ *   - one common surname plus initial spanned three different researchers of the
+ *     same first name at three institutions, so a forename match is NOT identity.
+ *   - one researcher carried no affiliation at all on 70 of 110 records, so
  *     affiliation cannot be the primary key either.
  *   - The same people's papers share co-authors densely: 170 co-authors seen
- *     more than once for Barbaro, 144 for Raman, 37 for Kolmar.
+ *     more than once for one author, 144 for another, 37 for a third.
  * Co-authorship is therefore the workhorse signal, ORCID is the certainty, and
  * affiliation and forename are supporting evidence and hard gates.
  *
@@ -65,7 +65,7 @@ const isInitialOnly = (s) => firstToken(s).length <= 1;
 export function compatible(a, b) {
   if (a.orcid && b.orcid && a.orcid !== b.orcid) return false;      // two ORCIDs is two people
   const fa = firstToken(a.fore), fb = firstToken(b.fore);
-  if (!isInitialOnly(fa) && !isInitialOnly(fb) && fa !== fb) return false;  // Amanda is not Andrew
+  if (!isInitialOnly(fa) && !isInitialOnly(fb) && fa !== fb) return false;  // two different first names are two people
   if (fa && fb && (isInitialOnly(fa) || isInitialOnly(fb)) && fa[0] !== fb[0]) return false;
   return true;
 }
@@ -155,13 +155,13 @@ export function clusterAuthors(records, { threshold = 0.8, totalForName = null }
 
   // ---- second pass: agglomerate at the CLUSTER level ------------------------
   // A pair of individual papers often shares few co-authors even when the two
-  // clusters they belong to share many. Measured on Barbaro R: the 97-paper
-  // cluster shares 13, 12 and 11 co-authors with sub-clusters that no pairwise
-  // score reached. Comparing whole clusters recovers them.
+  // clusters they belong to share many. Measured on one prolific author: the
+  // 97-paper cluster shares 13, 12 and 11 co-authors with sub-clusters that no
+  // pairwise score reached. Comparing whole clusters recovers them.
   //
   // How aggressive to be is scaled by how common the name is, which is knowable:
-  // the same search returns 17 records for "Kolmar A", 155 for "Barbaro R" and
-  // 9846 for "Shah N". On a rare name, two compatible records are almost
+  // the same search returns 17 records for one surname-plus-initial, 155 for
+  // another and 9846 for a third. On a rare name, two compatible records are almost
   // certainly one person; on a common one, that inference is worthless.
   const rare = totalForName !== null && totalForName <= 40;
 
@@ -183,7 +183,7 @@ export function clusterAuthors(records, { threshold = 0.8, totalForName = null }
         if (oa.size && ob.size && ![...oa].some((o) => ob.has(o))) continue;   // different people
         const fa = new Set(A.map((m) => firstToken(m.fore)).filter((f) => !isInitialOnly(f)));
         const fb = new Set(B.map((m) => firstToken(m.fore)).filter((f) => !isInitialOnly(f)));
-        if (fa.size && fb.size && ![...fa].some((f) => fb.has(f))) continue;   // Amanda is not Andrew
+        if (fa.size && fb.size && ![...fa].some((f) => fb.has(f))) continue;   // two different first names are two people
         const initA = [...new Set(A.map((m) => firstToken(m.fore)[0]).filter(Boolean))];
         const initB = [...new Set(B.map((m) => firstToken(m.fore)[0]).filter(Boolean))];
         if (initA.length && initB.length && !initA.some((x) => initB.includes(x))) continue;
@@ -240,7 +240,7 @@ export function clusterAffinity(a, b, records) {
   const fa = (a.fore || '').trim().toLowerCase().split(/[\s.]+/)[0];
   const fb = (b.fore || '').trim().toLowerCase().split(/[\s.]+/)[0];
   const bothFull = fa.length > 1 && fb.length > 1;
-  if (bothFull && fa !== fb) return 0;                 // Amanda is not Andrew
+  if (bothFull && fa !== fb) return 0;                 // two different first names are two people
   if (fa && fb && fa[0] !== fb[0]) return 0;
 
   const co = (rs) => new Set(rs.flatMap((r) => (r.coauthors || []).map((c) => c.toLowerCase())));
@@ -259,4 +259,58 @@ export function clusterAffinity(a, b, records) {
   const jrn = new Set(ra.map((r) => r.journal));
   if (rb.some((r) => jrn.has(r.journal))) s += 0.08;
   return Math.min(1, s);
+}
+
+/** A surname long enough that a bare name search is dominated by other people. */
+export const COMMON_NAME_RECORDS = 300;
+
+const orGroup = (parts) => (parts.length > 1 ? '(' + parts.join(' OR ') + ')' : parts[0] || '');
+
+/**
+ * The PubMed clause that follows one person.
+ *
+ * An ORCID alone is not it. Publishers pass an ORCID through only when it was
+ * attached at submission, which is frequently just the corresponding author, so
+ * it reaches a small minority of a researcher's papers. Measured 2026-09-06 on
+ * four real people, ORCID-only against name-based coverage: 4 against 241, 18
+ * against 155, 5 against 75, 5 against 17. In every case the union equalled the
+ * name count, so the ORCID widened nothing at all; its value is telling two
+ * people apart, not finding one person's work.
+ *
+ * The name also goes in unquoted, because quoting forces exact phrase matching
+ * on the author index and drops records filed under a fuller form: one surname
+ * plus initial returns 155 unquoted and 43 quoted.
+ */
+/**
+ * Trims an institution list for use in a query.
+ *
+ * The raw list repeats itself: "Washington University", "Washington University
+ * St Louis" and "Washington University St Louis Childrens Hospital" all appear
+ * for one author, and the shortest already matches the other two in [ad]. Longer
+ * variants are dropped, and a normalised affiliation that reads as a mangled
+ * department rather than a place is dropped too.
+ */
+export function tidyInstitutions(insts) {
+  const clean = [...new Set((insts || []).map((i) => (i || '').trim()).filter(Boolean))]
+    .filter((i) => i.split(' ').length <= 6)
+    .sort((a, b) => a.length - b.length);
+  const kept = [];
+  for (const i of clean) {
+    const toks = new Set(i.toLowerCase().split(' '));
+    const covered = kept.some((k) => k.toLowerCase().split(' ').every((t) => toks.has(t)));
+    if (!covered) kept.push(i);
+  }
+  return kept.slice(0, 4);
+}
+
+export function authorQuery(entry) {
+  const parts = [];
+  for (const o of entry.orcids || (entry.orcid ? [entry.orcid] : [])) parts.push(`${o}[auid]`);
+  if (entry.nameTerm) {
+    const insts = entry.common ? tidyInstitutions(entry.insts) : [];
+    parts.push(insts.length
+      ? `(${entry.nameTerm}[au] AND ${orGroup(insts.map((i) => `"${i}"[ad]`))})`
+      : `${entry.nameTerm}[au]`);
+  }
+  return orGroup(parts);
 }
