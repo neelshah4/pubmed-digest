@@ -9,8 +9,21 @@ name: Digest
 # Source: https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows
 
 "on":
-  schedule:
-    - cron: '23 11 * * 1'
+  # SCHEDULE DISABLED 2026-09-22. This multi-user build has never completed a run:
+  # no repo secrets are set, so on the runner the store falls back to the local file
+  # backend (src/store.ts picks on SUPABASE_URL), finds no data/users.json — it is
+  # gitignored as subscriber PII — and cli-digest.ts exits 1 at "no users configured".
+  # Three scheduled runs, three failures (09-07, 09-14, 09-21), one failure email each.
+  #
+  # Unrelated to the WORKING local pipeline that shares this name: launchd
+  # com.neel.pubmed-digest, Sundays 22:00 America/Chicago, which sends the real digest
+  # and feeds Zotero + the reading library. Nothing here touches that.
+  #
+  # To re-enable: set SUPABASE_URL + SUPABASE_SERVICE_KEY (and RESEND_API_KEY +
+  # MAIL_FROM to actually send), confirm a manual workflow_dispatch run is green,
+  # then uncomment the two lines below.
+  # schedule:
+  #   - cron: '23 11 * * 1'
   workflow_dispatch:
     inputs:
       dry_run:
