@@ -17,8 +17,13 @@ name: Ingest
 # commit counts as that activity and keeps this workflow alive.
 
 "on":
-  schedule:
-    - cron: '23 3 * * *'
+  # SCHEDULE DISABLED 2026-09-23 — project dormant. See docs/DORMANT.md to resume.
+  # This fed data/papers.json for the multi-user Digest job, which is also off; nothing
+  # else reads the cache. The WORKING personal digest (launchd com.neel.pubmed-digest)
+  # runs its own PubMed searches and does not depend on this job.
+  # Re-enable only after Digest is set up, by uncommenting the two lines below.
+  # schedule:
+  #   - cron: '23 3 * * *'
   workflow_dispatch:
     inputs:
       days:

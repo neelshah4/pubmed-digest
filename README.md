@@ -1,5 +1,8 @@
 # pubmed-digest
 
+> **Dormant since 2026-09-23.** Scheduled jobs are off; the code is intact. What was frozen,
+> why, and the ordered steps to resume are in [docs/DORMANT.md](docs/DORMANT.md).
+
 One ranked, deduplicated literature digest built from many PubMed searches — instead of the
 N separate raw-title emails MyNCBI sends you.
 
